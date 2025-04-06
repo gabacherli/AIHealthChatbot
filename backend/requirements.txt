@@ -1,0 +1,7 @@
+flask
+flask-cors
+flask-jwt-extended
+openai
+faiss-cpu
+sentence-transformers
+sglang
