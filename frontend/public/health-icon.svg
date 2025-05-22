@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="#3498db" />
+  
+  <!-- Medical cross -->
+  <rect x="176" y="96" width="160" height="320" rx="20" ry="20" fill="white" />
+  <rect x="96" y="176" width="320" height="160" rx="20" ry="20" fill="white" />
+  
+  <!-- Heartbeat line -->
+  <path d="M96 256 L176 256 L196 216 L236 296 L276 216 L316 296 L336 256 L416 256" 
+        stroke="#e74c3c" stroke-width="16" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+</svg>

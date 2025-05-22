@@ -1,0 +1,144 @@
+DIABETES MELLITUS
+
+Definition:
+Diabetes mellitus is a chronic metabolic disorder characterized by elevated blood glucose levels (hyperglycemia) resulting from defects in insulin secretion, insulin action, or both.
+
+Types:
+1. Type 1 Diabetes (T1DM):
+   - Autoimmune destruction of pancreatic beta cells leading to absolute insulin deficiency
+   - Usually diagnosed in children and young adults
+   - Requires lifelong insulin therapy
+   - Accounts for 5-10% of all diabetes cases
+
+2. Type 2 Diabetes (T2DM):
+   - Progressive insulin secretory defect on the background of insulin resistance
+   - Most common form (90-95% of all diabetes cases)
+   - Often associated with obesity, physical inactivity, and family history
+   - May be managed with lifestyle modifications, oral medications, and/or insulin
+
+3. Gestational Diabetes:
+   - Glucose intolerance with onset or first recognition during pregnancy
+   - Affects 2-10% of pregnancies
+   - Usually resolves after delivery but increases risk for T2DM later in life
+
+4. Other Specific Types:
+   - Genetic defects of beta-cell function or insulin action
+   - Diseases of the exocrine pancreas (e.g., pancreatitis)
+   - Endocrinopathies
+   - Drug or chemical-induced
+
+Diagnostic Criteria:
+1. Fasting Plasma Glucose (FPG) ≥ 126 mg/dL (7.0 mmol/L)
+2. 2-hour Plasma Glucose ≥ 200 mg/dL (11.1 mmol/L) during OGTT
+3. HbA1c ≥ 6.5% (48 mmol/mol)
+4. Random Plasma Glucose ≥ 200 mg/dL (11.1 mmol/L) in patients with classic symptoms of hyperglycemia
+
+Prediabetes:
+- FPG: 100-125 mg/dL (5.6-6.9 mmol/L) - Impaired Fasting Glucose (IFG)
+- 2-hour PG: 140-199 mg/dL (7.8-11.0 mmol/L) - Impaired Glucose Tolerance (IGT)
+- HbA1c: 5.7-6.4% (39-47 mmol/mol)
+
+Clinical Manifestations:
+- Polyuria (increased urination)
+- Polydipsia (increased thirst)
+- Polyphagia (increased hunger)
+- Unexplained weight loss
+- Fatigue
+- Blurred vision
+- Poor wound healing
+- Recurrent infections
+
+Complications:
+1. Acute:
+   - Diabetic ketoacidosis (DKA) - primarily in T1DM
+   - Hyperosmolar hyperglycemic state (HHS) - primarily in T2DM
+   - Hypoglycemia (low blood glucose) - treatment-related
+
+2. Chronic:
+   - Microvascular:
+     * Diabetic nephropathy (kidney disease)
+     * Diabetic retinopathy (eye disease)
+     * Diabetic neuropathy (nerve damage)
+   - Macrovascular:
+     * Coronary artery disease
+     * Peripheral arterial disease
+     * Cerebrovascular disease
+   - Other:
+     * Diabetic foot ulcers
+     * Increased susceptibility to infections
+     * Skin conditions
+     * Gastrointestinal issues
+
+Management:
+1. Lifestyle Modifications:
+   - Medical nutrition therapy
+   - Regular physical activity
+   - Weight management
+   - Smoking cessation
+
+2. Pharmacological Therapy:
+   - Insulin therapy (various types and regimens)
+   - Oral antidiabetic medications:
+     * Biguanides (e.g., metformin)
+     * Sulfonylureas
+     * Meglitinides
+     * Thiazolidinediones
+     * DPP-4 inhibitors
+     * SGLT-2 inhibitors
+     * Alpha-glucosidase inhibitors
+   - Injectable non-insulin medications:
+     * GLP-1 receptor agonists
+     * Amylin analogs
+
+3. Monitoring:
+   - Self-monitoring of blood glucose (SMBG)
+   - Continuous glucose monitoring (CGM)
+   - Regular HbA1c testing
+   - Regular screening for complications
+
+4. Education and Support:
+   - Diabetes self-management education
+   - Psychological support
+   - Regular medical follow-up
+
+Prevention:
+1. Primary Prevention (preventing diabetes):
+   - Healthy diet
+   - Regular physical activity
+   - Maintaining healthy weight
+   - Avoiding tobacco use
+
+2. Secondary Prevention (preventing complications):
+   - Good glycemic control
+   - Blood pressure control
+   - Lipid management
+   - Regular screening for complications
+
+3. Tertiary Prevention (preventing disability):
+   - Early treatment of complications
+   - Rehabilitation
+   - Adaptive strategies
+
+Special Considerations:
+1. Pediatric Diabetes:
+   - Unique challenges in management
+   - Impact on growth and development
+   - Transition to adult care
+
+2. Diabetes in Pregnancy:
+   - Preconception counseling
+   - Tight glycemic control
+   - Monitoring for complications
+   - Management during labor and delivery
+
+3. Diabetes in Older Adults:
+   - Risk of hypoglycemia
+   - Polypharmacy concerns
+   - Functional status considerations
+   - Modified treatment goals
+
+4. Diabetes in Hospital Settings:
+   - Glycemic targets
+   - Insulin protocols
+   - Perioperative management
+   - Transition back to outpatient regimen

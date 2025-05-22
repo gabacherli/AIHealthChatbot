@@ -1,0 +1,177 @@
+HYPERTENSION (HIGH BLOOD PRESSURE)
+
+Definition:
+Hypertension is a chronic medical condition characterized by persistently elevated arterial blood pressure. It is defined as systolic blood pressure (SBP) ≥ 130 mmHg and/or diastolic blood pressure (DBP) ≥ 80 mmHg according to the 2017 ACC/AHA guidelines.
+
+Classification:
+1. Normal: SBP < 120 mmHg and DBP < 80 mmHg
+2. Elevated: SBP 120-129 mmHg and DBP < 80 mmHg
+3. Stage 1 Hypertension: SBP 130-139 mmHg or DBP 80-89 mmHg
+4. Stage 2 Hypertension: SBP ≥ 140 mmHg or DBP ≥ 90 mmHg
+5. Hypertensive Crisis: SBP > 180 mmHg and/or DBP > 120 mmHg
+
+Types:
+1. Primary (Essential) Hypertension:
+   - No identifiable cause
+   - Accounts for 90-95% of all cases
+   - Influenced by genetic and environmental factors
+
+2. Secondary Hypertension:
+   - Results from an identifiable underlying condition
+   - Accounts for 5-10% of all cases
+   - Common causes include:
+     * Renal disease (renal parenchymal disease, renovascular disease)
+     * Endocrine disorders (primary aldosteronism, Cushing's syndrome, pheochromocytoma, thyroid disorders)
+     * Obstructive sleep apnea
+     * Coarctation of the aorta
+     * Medications (NSAIDs, oral contraceptives, corticosteroids, decongestants)
+     * Substance abuse (cocaine, amphetamines)
+
+Risk Factors:
+1. Non-modifiable:
+   - Age (risk increases with age)
+   - Family history
+   - Race/ethnicity (higher prevalence in Black populations)
+   - Genetic factors
+
+2. Modifiable:
+   - Obesity
+   - Physical inactivity
+   - Unhealthy diet (high sodium, low potassium)
+   - Excessive alcohol consumption
+   - Tobacco use
+   - Stress
+   - Certain medications
+
+Clinical Presentation:
+- Often asymptomatic ("silent killer")
+- When symptomatic, may present with:
+  * Headache (particularly occipital, morning)
+  * Dizziness
+  * Visual disturbances
+  * Chest pain
+  * Shortness of breath
+  * Nosebleeds
+  * Flushing
+
+Diagnostic Evaluation:
+1. Blood Pressure Measurement:
+   - Office measurements (multiple readings on different occasions)
+   - Home blood pressure monitoring (HBPM)
+   - Ambulatory blood pressure monitoring (ABPM)
+
+2. Basic Evaluation:
+   - Complete history and physical examination
+   - Laboratory tests:
+     * Complete blood count
+     * Urinalysis
+     * Blood chemistry (electrolytes, creatinine, glucose)
+     * Lipid profile
+     * Thyroid function tests
+   - 12-lead electrocardiogram
+
+3. Additional Evaluation (when indicated):
+   - Echocardiogram
+   - Renal ultrasound
+   - Plasma renin activity and aldosterone levels
+   - 24-hour urinary metanephrines
+   - Sleep study
+   - Renal artery imaging
+
+Complications:
+1. Cardiovascular:
+   - Coronary artery disease
+   - Left ventricular hypertrophy
+   - Heart failure
+   - Arrhythmias (especially atrial fibrillation)
+   - Aortic aneurysm and dissection
+
+2. Cerebrovascular:
+   - Stroke
+   - Transient ischemic attack
+   - Vascular dementia
+
+3. Renal:
+   - Chronic kidney disease
+   - End-stage renal disease
+
+4. Ophthalmologic:
+   - Hypertensive retinopathy
+   - Vision loss
+
+5. Hypertensive Emergencies:
+   - Hypertensive encephalopathy
+   - Acute coronary syndrome
+   - Acute heart failure with pulmonary edema
+   - Aortic dissection
+   - Eclampsia
+
+Management:
+1. Lifestyle Modifications:
+   - Dietary Approaches to Stop Hypertension (DASH) diet
+   - Sodium restriction (< 2.3 g/day)
+   - Regular physical activity (150 minutes/week of moderate-intensity activity)
+   - Weight reduction
+   - Limiting alcohol consumption
+   - Smoking cessation
+   - Stress management
+
+2. Pharmacological Therapy:
+   - First-line agents:
+     * Thiazide diuretics
+     * Calcium channel blockers (CCBs)
+     * Angiotensin-converting enzyme inhibitors (ACEIs)
+     * Angiotensin II receptor blockers (ARBs)
+   - Second-line agents:
+     * Beta-blockers
+     * Alpha-blockers
+     * Central alpha-2 agonists
+     * Direct vasodilators
+     * Aldosterone antagonists
+
+3. Treatment Thresholds and Goals:
+   - General population:
+     * Initiate at ≥ 140/90 mmHg
+     * Goal < 130/80 mmHg
+   - High cardiovascular risk or established cardiovascular disease:
+     * Initiate at ≥ 130/80 mmHg
+     * Goal < 130/80 mmHg
+   - Older adults (≥ 65 years):
+     * Consider comorbidities and frailty
+     * Goal SBP 130-139 mmHg
+
+4. Special Populations:
+   - Diabetes mellitus: Goal < 130/80 mmHg
+   - Chronic kidney disease: Goal < 130/80 mmHg
+   - Heart failure: Goal < 130/80 mmHg
+   - Pregnancy: Different medications and goals
+
+5. Resistant Hypertension:
+   - Defined as BP above goal despite adherence to ≥ 3 antihypertensive medications
+   - Evaluate for secondary causes
+   - Consider spironolactone as fourth-line agent
+   - Consider referral to hypertension specialist
+
+Prevention:
+1. Primary Prevention:
+   - Regular blood pressure screening
+   - Healthy lifestyle habits
+   - Management of other cardiovascular risk factors
+
+2. Secondary Prevention:
+   - Adherence to treatment regimen
+   - Regular monitoring
+   - Addressing barriers to control
+
+Follow-up:
+- Monthly follow-up until blood pressure at goal
+- Every 3-6 months once at goal
+- Annual comprehensive assessment
+- Regular screening for target organ damage and complications
+
+Patient Education:
+- Understanding the condition and its risks
+- Importance of medication adherence
+- Home blood pressure monitoring techniques
+- Recognition of warning signs requiring medical attention
+- Lifestyle modification strategies

@@ -1,0 +1,32 @@
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-width: 800px;
+  margin: 0 auto;
+  background-color: var(--color-background);
+}
+
+.chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+
+.chat-header h2 {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.user-role {
+  font-size: var(--font-size-sm);
+}
+
+.user-role span {
+  font-weight: 600;
+  text-transform: capitalize;
+}

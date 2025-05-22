@@ -1,19 +1,38 @@
+"""
+Application factory module.
+This module contains the application factory function.
+"""
 from flask import Flask
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
-from .config.config import Config
-from .routes.chat_routes import chat_bp
+from .config import get_config
+from .api import api_bp
+from .utils.error_handlers import register_error_handlers
 
-def create_app():
+def create_app(test_config=None):
+    """
+    Create and configure the Flask application.
+
+    Args:
+        test_config: Test configuration to use instead of the default.
+
+    Returns:
+        The configured Flask application.
+    """
+
     app = Flask(__name__)
-    config = Config()
-    app.env = config.ENV
-    app.config.from_object(Config)
-    app.config["JWT_SECRET_KEY"] = config.JWT_SECRET_KEY
+
+    if test_config:
+        app.config.from_mapping(test_config)
+    else:
+        config = get_config()
+        app.config.from_object(config)
+
     CORS(app)
     JWTManager(app)
 
-    # Register route blueprints
-    app.register_blueprint(chat_bp, url_prefix="/api")
+    register_error_handlers(app)
+
+    app.register_blueprint(api_bp)
 
     return app

@@ -3,7 +3,7 @@ class Constants:
         self.ENV_PRODUCTION = "production"
         self.ENV_DEVELOPMENT = "development"
         self.DEFAULT_MODEL_NAME = "gpt-4o-mini"
-        self.DEFAULT_EMBEDDING_MODEL = "multi-qa-MiniLM-L6-cos-v1" # Review model later
+        self.DEFAULT_EMBEDDING_MODEL = "multi-qa-MiniLM-L6-cos-v1" # TODO: Review model
         self.DEFAULT_CHUNK_PATH = "data/"
         # Environment-specific variables
         # Dev

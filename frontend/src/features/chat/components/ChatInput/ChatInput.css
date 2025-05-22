@@ -1,0 +1,80 @@
+.chat-input-form {
+  display: flex;
+  padding: 0.75rem;
+  background-color: var(--color-white);
+  border-top: 1px solid var(--color-border);
+  align-items: center; /* Center items vertically */
+  width: 100%; /* Take full width */
+  gap: 8px; /* Add space between elements */
+}
+
+.chat-textarea {
+  flex: 1;
+  height: 40px; /* Initial height matching the button */
+  min-height: 40px;
+  max-height: 150px;
+  padding: 8px 12px; /* Match button padding more closely */
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-md);
+  resize: none; /* Disable manual resizing */
+  overflow-y: auto; /* Add scrollbar when needed */
+  line-height: 1.5;
+  font-family: inherit; /* Use the same font as the rest of the app */
+  box-sizing: border-box; /* Include padding in width calculation */
+  width: calc(100% - 88px); /* Give more space to textarea, accounting for button width and gap */
+}
+
+.chat-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.chat-input-form button {
+  padding: 8px 12px;
+  min-width: 80px; /* Increased to accommodate "Sending..." */
+  width: 80px; /* Fixed width */
+  height: 40px; /* Match the height of textarea */
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  border: none;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  flex-shrink: 0; /* Prevent button from shrinking */
+  overflow: hidden; /* Prevent text overflow */
+}
+
+.chat-input-form button:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.chat-input-form button:disabled {
+  background-color: var(--color-text-light);
+  cursor: not-allowed;
+}
+
+/* Responsive styles */
+@media (max-width: 576px) {
+  .chat-input-form {
+    padding: var(--spacing-sm);
+    gap: 4px; /* Smaller gap on mobile */
+  }
+
+  .chat-textarea {
+    padding: var(--spacing-sm);
+    width: calc(100% - 74px); /* Adjust for button width and gap */
+  }
+
+  .chat-input-form button {
+    width: 70px; /* Wider to fit "Sending..." */
+    min-width: 70px;
+    padding: var(--spacing-sm);
+    font-size: 0.9rem; /* Slightly smaller font on mobile */
+  }
+}
