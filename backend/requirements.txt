@@ -6,3 +6,16 @@ faiss-cpu
 sentence-transformers
 sglang
 python-dotenv
+qdrant-client
+pypdf
+python-docx
+pillow
+langchain
+transformers
+torch
+scikit-learn
+numpy
+pandas
+werkzeug
+tqdm
+PyMuPDF==1.22.5

@@ -13,7 +13,7 @@ chat_bp = Blueprint("chat", __name__, url_prefix="/chat")
 def chat():
     """
     Chat route.
-    
+
     Returns:
         A JSON response with the answer to the question.
     """
@@ -26,7 +26,24 @@ def chat():
         return jsonify({"error": "No question provided"}), 400
 
     try:
-        answer = get_answer_with_context(question, role)
-        return jsonify({"answer": answer})
+        # Get user ID from JWT claims
+        user_id = claims.get("sub", "anonymous")
+
+        # Get answer with context and sources
+        result = get_answer_with_context(question, role, user_id)
+
+        # Check if result is a tuple (answer, sources)
+        if isinstance(result, tuple) and len(result) == 2:
+            answer, sources = result
+            return jsonify({
+                "answer": answer,
+                "sources": sources
+            })
+        else:
+            # Backward compatibility
+            return jsonify({
+                "answer": result,
+                "sources": []
+            })
     except Exception as e:
         return jsonify({"error": str(e)}), 500

@@ -65,4 +65,71 @@ export const chatService = {
   }
 };
 
+// Document services
+export const documentService = {
+  uploadDocument: async (formData) => {
+    try {
+      // Use a different config for file uploads
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      };
+
+      const response = await axios.post(
+        'http://localhost:5000/api/documents/upload',
+        formData,
+        config
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error('Document upload error:', error);
+      throw error.response ? error.response.data : { msg: 'Network error' };
+    }
+  },
+
+  listDocuments: async () => {
+    try {
+      const response = await api.get('/documents/list');
+      return response.data;
+    } catch (error) {
+      console.error('List documents error:', error);
+      throw error.response ? error.response.data : { msg: 'Network error' };
+    }
+  },
+
+  downloadDocument: async (filename) => {
+    try {
+      // Use direct window.open for file downloads
+      window.open(`http://localhost:5000/api/documents/download/${filename}`, '_blank');
+      return true;
+    } catch (error) {
+      console.error('Document download error:', error);
+      throw error.response ? error.response.data : { msg: 'Network error' };
+    }
+  },
+
+  deleteDocument: async (filename) => {
+    try {
+      const response = await api.delete(`/documents/delete/${filename}`);
+      return response.data;
+    } catch (error) {
+      console.error('Document delete error:', error);
+      throw error.response ? error.response.data : { msg: 'Network error' };
+    }
+  },
+
+  searchDocuments: async (query, filters = {}) => {
+    try {
+      const response = await api.post('/documents/search', { query, filters });
+      return response.data;
+    } catch (error) {
+      console.error('Document search error:', error);
+      throw error.response ? error.response.data : { msg: 'Network error' };
+    }
+  }
+};
+
 export default api;
