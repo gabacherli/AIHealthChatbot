@@ -1,0 +1,31 @@
+# Development Dockerfile for React frontend
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies for development
+RUN apk add --no-cache git
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm install
+
+# Copy source code
+COPY . .
+
+# Create a non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 && \
+    chown -R nextjs:nodejs /app
+
+# Switch to non-root user
+USER nextjs
+
+# Expose port
+EXPOSE 3000
+
+# Start development server
+CMD ["npm", "start"]

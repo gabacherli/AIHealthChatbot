@@ -22,13 +22,42 @@ The project is organized into two main directories:
 
 ## Getting Started
 
-### Prerequisites
+### Option 1: Docker (Recommended)
 
+The easiest way to run the application is using Docker:
+
+**Prerequisites:**
+- Docker and Docker Compose installed
+- OpenAI API key
+
+**Quick Start:**
+```bash
+# Clone and navigate to the project
+git clone <repository-url>
+cd AIHealthChatbot
+
+# Create environment file
+cp .env.example .env
+
+# Edit .env and add your OpenAI API key
+# OPENAI_API_KEY=your-openai-api-key-here
+
+# Start the application
+docker-compose up -d
+
+# Access at http://localhost
+```
+
+For detailed Docker instructions, see [DOCKER_README.md](DOCKER_README.md).
+
+### Option 2: Manual Setup
+
+**Prerequisites:**
 - Node.js and npm
 - Python 3.8+
 - OpenAI API key
 
-### Backend Setup
+#### Backend Setup
 
 1. Navigate to the backend directory:
    ```
@@ -61,7 +90,7 @@ The project is organized into two main directories:
    python app.py
    ```
 
-### Frontend Setup
+#### Frontend Setup
 
 1. Navigate to the frontend directory:
    ```
