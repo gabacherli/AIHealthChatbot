@@ -12,7 +12,7 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 def login():
     """
     Login route.
-    
+
     Returns:
         A JSON response with the access token and user role.
     """
@@ -25,11 +25,14 @@ def login():
         return jsonify({"msg": "Invalid credentials"}), 401
 
     access_token = create_access_token(
-        identity=username, 
-        additional_claims={"role": user["role"]}
+        identity=username,
+        additional_claims={"role": user["role"], "user_id": user["id"]}
     )
-    
+
     return jsonify({
-        "token": access_token, 
-        "role": user["role"]
+        "token": access_token,
+        "role": user["role"],
+        "user_id": user["id"],
+        "username": user["username"],
+        "full_name": user.get("full_name", user["username"])
     })

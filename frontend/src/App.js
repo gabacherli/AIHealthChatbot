@@ -7,6 +7,8 @@ import Login from './components/Login';
 import Chat from './components/Chat';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProfessionalDashboard from './components/ProfessionalDashboard';
+import PatientDashboard from './components/PatientDashboard';
 
 // Pages
 import DocumentsPage from './pages/DocumentsPage';
@@ -34,6 +36,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <DocumentsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/professional"
+              element={
+                <ProtectedRoute>
+                  <ProfessionalDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/dashboard/patient"
+              element={
+                <ProtectedRoute>
+                  <PatientDashboard />
                 </ProtectedRoute>
               }
             />

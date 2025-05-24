@@ -67,22 +67,17 @@ def upload_document():
             # Create user-specific upload directory if it doesn't exist
             upload_dir = os.path.join(config.UPLOAD_FOLDER, user_id)
             os.makedirs(upload_dir, exist_ok=True)
-            print(f"Upload directory: {upload_dir}")
-
             # Save the file
             file_path = os.path.join(upload_dir, filename)
             file.save(file_path)
-            print(f"File saved to: {file_path}")
 
             # Process and store the document
-            print(f"Processing document with user_id={user_id}, user_role={user_role}")
             document_id = document_service.process_and_store_document(
                 file_path,
                 filename,
                 user_role=user_role,
                 user_id=user_id
             )
-            print(f"Document processed successfully, ID: {document_id}")
 
             return jsonify({
                 "message": "Document uploaded and processed successfully",
@@ -90,9 +85,6 @@ def upload_document():
                 "filename": filename
             })
         except Exception as e:
-            print(f"Error processing document: {e}")
-            import traceback
-            traceback.print_exc()
             return jsonify({"error": str(e)}), 500
 
     return jsonify({"error": "File type not allowed"}), 400
@@ -111,19 +103,11 @@ def list_documents():
         claims = get_jwt()
         user_id = claims.get("sub", "anonymous")
 
-        print(f"=== LIST DOCUMENTS DEBUG ===")
-        print(f"User ID: {user_id}")
-
         # Get documents for the user
         documents = document_service.get_documents_by_user(user_id)
-        print(f"Found {len(documents)} documents for user {user_id}")
-        print(f"Documents: {documents}")
 
         return jsonify({"documents": documents})
     except Exception as e:
-        print(f"Error listing documents: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @documents_bp.route("/download/<filename>", methods=["GET"])
@@ -159,13 +143,10 @@ def download_document(filename):
             )
 
         # If file not found on disk, check if it's a medical image stored in the database
-        print(f"File not found on disk: {file_path}, checking database for medical image...")
-
         # Try to retrieve medical image data from the database
         image_data = document_service.get_medical_image_data(secure_name, user_id)
 
         if image_data:
-            print(f"Retrieved medical image from database: {len(image_data)} bytes")
 
             # Determine content type based on file extension
             file_ext = secure_name.lower().split('.')[-1] if '.' in secure_name else ''
@@ -194,9 +175,6 @@ def download_document(filename):
         return jsonify({"error": f"Medical image not found: {secure_name}"}), 404
 
     except Exception as e:
-        print(f"Error downloading document: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @documents_bp.route("/delete/<filename>", methods=["DELETE"])

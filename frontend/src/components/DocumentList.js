@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -183,31 +183,47 @@ const DocumentList = ({ onDocumentDeleted }) => {
   const deleteButtonHoverBg = useColorModeValue('red.50', 'red.900');
   const deleteButtonFocusBoxShadow = useColorModeValue('red.200', 'red.600');
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
       const token = await getToken();
+
       const response = await api.get('/documents/list', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      setDocuments(response.data.documents || []);
+      const docs = response.data.documents || [];
+      setDocuments(docs);
       setLastRefreshed(new Date());
     } catch (err) {
-      console.error('Error fetching documents:', err);
+      console.error('❌ Error fetching documents:', err);
       setError('Failed to load documents. Please try again later.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDocuments();
-  }, []);
+  }, [fetchDocuments]);
+
+  // Add a method to manually refresh documents
+  const refreshDocuments = useCallback(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
+
+  // Expose refresh method to parent component
+  useEffect(() => {
+    window.refreshDocumentList = refreshDocuments;
+
+    return () => {
+      delete window.refreshDocumentList;
+    };
+  }, [refreshDocuments]);
 
   const handleDownload = async (filename) => {
     try {

@@ -17,7 +17,10 @@ export const AuthProvider = ({ children }) => {
     const checkLoggedIn = () => {
       if (authService.isAuthenticated()) {
         setUser({
-          role: authService.getRole()
+          id: authService.getUserId(),
+          role: authService.getRole(),
+          username: authService.getUsername(),
+          full_name: authService.getFullName()
         });
       }
       setLoading(false);
@@ -29,11 +32,12 @@ export const AuthProvider = ({ children }) => {
   // Login function
   const login = async (username, password) => {
     try {
-      console.log('AuthContext: Attempting login');
       const data = await authService.login(username, password);
-      console.log('AuthContext: Login successful, setting user');
       setUser({
-        role: data.role
+        id: data.user_id,
+        role: data.role,
+        username: data.username,
+        full_name: data.full_name
       });
       return { success: true };
     } catch (error) {

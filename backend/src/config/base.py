@@ -47,5 +47,9 @@ class BaseConfig:
         'dcm', 'dicom', 'ima', 'img'  # DICOM medical image formats
     }
 
+    # Database settings
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///health_chatbot.db")
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
     # Application settings
     CHUNK_DATA_PATH = "data/"

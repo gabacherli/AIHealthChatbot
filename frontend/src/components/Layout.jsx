@@ -29,6 +29,22 @@ const Layout = ({ children }) => {
           <nav className="nav">
             <Link to="/chat" className={isActive('/chat')}>Chat</Link>
             <Link to="/documents" className={isActive('/documents')}>Documents</Link>
+            {user?.role === 'professional' && (
+              <Link
+                to="/dashboard/professional"
+                className={isActive('/dashboard/professional')}
+              >
+                Dashboard
+              </Link>
+            )}
+            {user?.role === 'patient' && (
+              <Link
+                to="/dashboard/patient"
+                className={isActive('/dashboard/patient')}
+              >
+                Dashboard
+              </Link>
+            )}
             <button className="logout-button" onClick={handleLogout}>
               Logout
             </button>

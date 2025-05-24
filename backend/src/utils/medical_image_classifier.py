@@ -253,14 +253,14 @@ class MedicalImageClassifier:
             analysis = {
                 'is_dicom': False,
                 'medical_type': medical_type,
-                'width': width,
-                'height': height,
+                'width': int(width),
+                'height': int(height),
                 'mode': mode,
                 'format': format_type,
-                'is_grayscale': is_grayscale,
+                'is_grayscale': bool(is_grayscale),  # Convert numpy bool to Python bool
                 'aspect_ratio': round(width / height, 2),
                 'file_size_bytes': len(file_bytes),
-                'medical_context': medical_context
+                'medical_context': self._convert_numpy_types(medical_context)  # Convert all numpy types
             }
 
             logger.info(f"Successfully analyzed standard medical image: {file_name} - Type: {medical_type}")
@@ -269,6 +269,33 @@ class MedicalImageClassifier:
         except Exception as e:
             logger.error(f"Failed to analyze standard medical image: {e}")
             return self._create_fallback_analysis(file_bytes, file_name, str(e))
+
+    def _convert_numpy_types(self, obj):
+        """
+        Recursively convert numpy types to Python native types for JSON serialization.
+
+        Args:
+            obj: Object that may contain numpy types
+
+        Returns:
+            Object with numpy types converted to Python native types
+        """
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.bool_):
+            return bool(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, dict):
+            return {key: self._convert_numpy_types(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_numpy_types(item) for item in obj]
+        elif isinstance(obj, tuple):
+            return tuple(self._convert_numpy_types(item) for item in obj)
+        else:
+            return obj
 
     def _classify_medical_image_type(self, image: Image.Image, file_name: str) -> str:
         """

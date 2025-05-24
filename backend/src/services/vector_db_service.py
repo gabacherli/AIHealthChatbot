@@ -3,10 +3,14 @@ Vector database service.
 This module contains functions for interacting with the Qdrant vector database.
 """
 import os
+import logging
 import uuid
 import numpy as np
 from typing import List, Dict, Any, Optional
 from ..config.base import BaseConfig
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 config = BaseConfig()
 
@@ -224,13 +228,13 @@ class VectorDBService:
 
             # Store points in batches
             if points:
-                self.client.upsert(
+                result = self.client.upsert(
                     collection_name=self.collection_name,
                     points=points
                 )
 
             return ids
-        except Exception:
+        except Exception as e:
             return []
 
     def search_similar(
@@ -251,7 +255,6 @@ class VectorDBService:
             List of similar documents with scores.
         """
         if not self.client:
-            print("Vector database client not initialized, cannot search")
             return []
 
         try:
@@ -313,16 +316,21 @@ class VectorDBService:
             # Format the results
             results = []
             for scored_point in search_result:
+                # Prepare metadata, excluding large binary data
+                metadata = {
+                    k: v for k, v in scored_point.payload["metadata"].items()
+                    if k not in ["image_data", "image_data_base64"]
+                }
+
                 results.append({
                     "id": scored_point.id,
                     "content": scored_point.payload["content"],
-                    "metadata": scored_point.payload["metadata"],
+                    "metadata": metadata,
                     "score": scored_point.score
                 })
 
             return results
         except Exception as e:
-            print(f"Error searching similar documents: {e}")
             return []
 
     def delete_by_source(self, source: str) -> int:
@@ -336,7 +344,6 @@ class VectorDBService:
             Number of points deleted.
         """
         if not self.client:
-            print("Vector database client not initialized, cannot delete")
             return 0
 
         try:
@@ -369,10 +376,8 @@ class VectorDBService:
                 # If we can't determine count, assume success if no exception
                 deleted_count = 1
 
-            print(f"Deleted {deleted_count} points for source '{source}'")
             return deleted_count
         except Exception as e:
-            print(f"Error deleting by source: {e}")
             return 0
 
     def delete_by_source_and_user(self, source: str, user_id: str) -> int:
@@ -387,7 +392,6 @@ class VectorDBService:
             Number of points deleted.
         """
         if not self.client:
-            print("Vector database client not initialized, cannot delete")
             return 0
 
         try:
@@ -424,10 +428,8 @@ class VectorDBService:
                 # If we can't determine count, assume success if no exception
                 deleted_count = 1
 
-            print(f"Deleted {deleted_count} points for source '{source}' and user '{user_id}'")
             return deleted_count
         except Exception as e:
-            print(f"Error deleting by source and user: {e}")
             return 0
 
     def get_all_sources(self) -> List[str]:
@@ -438,7 +440,6 @@ class VectorDBService:
             List of source document names.
         """
         if not self.client:
-            print("Vector database client not initialized, cannot get sources")
             return []
 
         try:
@@ -470,5 +471,4 @@ class VectorDBService:
 
             return list(sources)
         except Exception as e:
-            print(f"Error getting all sources: {e}")
             return []

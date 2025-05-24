@@ -9,6 +9,8 @@ from flask_jwt_extended import JWTManager
 from .config import get_config
 from .api import api_bp
 from .utils.error_handlers import register_error_handlers
+from .models.database import db
+from .utils.database_init import init_database
 
 def create_app(test_config=None):
     """
@@ -47,6 +49,13 @@ def create_app(test_config=None):
          methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
          supports_credentials=True,
          expose_headers=["Content-Range", "X-Content-Range"])
+
+    # Initialize database
+    db.init_app(app)
+
+    # Initialize database tables and migrate existing data
+    with app.app_context():
+        init_database(app)
 
     JWTManager(app)
 
