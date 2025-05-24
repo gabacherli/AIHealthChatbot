@@ -120,29 +120,41 @@ class DocumentService:
             A list of documents with metadata.
         """
         if not self.vector_db_service.client:
+            print("Vector database client not available, returning empty list")
             return []
 
         try:
+            from qdrant_client.http import models
+
+            # Create proper filter using Qdrant models
+            filter_query = models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="metadata.user_id",
+                        match=models.MatchValue(value=user_id)
+                    )
+                ]
+            )
+
             # Use scroll to get all points efficiently
             scroll_result = self.vector_db_service.client.scroll(
                 collection_name=self.vector_db_service.collection_name,
                 limit=100,
                 with_payload=["metadata"],
                 with_vectors=False,
-                filter={
-                    "must": [
-                        {
-                            "key": "metadata.user_id",
-                            "match": {"value": user_id}
-                        }
-                    ]
-                }
+                scroll_filter=filter_query
             )
 
             documents = {}
             points = scroll_result[0]
+            next_page_offset = scroll_result[1]
+            max_iterations = 10  # Safety limit to prevent infinite loops
 
-            while points:
+            iteration = 0
+            while points and iteration < max_iterations:
+                iteration += 1
+                print(f"Processing batch {iteration} with {len(points)} points")
+
                 for point in points:
                     if "metadata" in point.payload and "source" in point.payload["metadata"]:
                         source = point.payload["metadata"]["source"]
@@ -156,23 +168,32 @@ class DocumentService:
                                 }
                             }
 
+                # Check if there are more points to fetch
+                if next_page_offset is None:
+                    print("No more pages to fetch")
+                    break
+
                 # Get next batch
-                scroll_result = self.vector_db_service.client.scroll(
-                    collection_name=self.vector_db_service.collection_name,
-                    limit=100,
-                    with_payload=["metadata"],
-                    with_vectors=False,
-                    offset=scroll_result[1],
-                    filter={
-                        "must": [
-                            {
-                                "key": "metadata.user_id",
-                                "match": {"value": user_id}
-                            }
-                        ]
-                    }
-                )
-                points = scroll_result[0]
+                try:
+                    scroll_result = self.vector_db_service.client.scroll(
+                        collection_name=self.vector_db_service.collection_name,
+                        limit=100,
+                        with_payload=["metadata"],
+                        with_vectors=False,
+                        offset=next_page_offset,
+                        scroll_filter=filter_query
+                    )
+                    points = scroll_result[0]
+                    next_page_offset = scroll_result[1]
+
+                    # If no new points, break
+                    if not points:
+                        print("No more points returned")
+                        break
+
+                except Exception as scroll_error:
+                    print(f"Error in scroll pagination: {scroll_error}")
+                    break
 
             return list(documents.values())
         except Exception as e:
@@ -188,8 +209,16 @@ class DocumentService:
             user_id: Optional user ID for authorization.
 
         Returns:
-            The number of chunks deleted.
+            The number of chunks deleted, or 1 if file was deleted successfully.
         """
+        # Check if document exists before deletion
+        if user_id:
+            file_path = os.path.join(config.UPLOAD_FOLDER, user_id, filename)
+        else:
+            file_path = os.path.join(config.UPLOAD_FOLDER, filename)
+
+        file_existed = os.path.exists(file_path)
+
         # Delete the document from the vector database
         if user_id:
             # Delete only documents owned by the user
@@ -199,15 +228,21 @@ class DocumentService:
             num_deleted = self.vector_db_service.delete_by_source(filename)
 
         # Delete the file if it exists
-        if user_id:
-            file_path = os.path.join(config.UPLOAD_FOLDER, user_id, filename)
-        else:
-            file_path = os.path.join(config.UPLOAD_FOLDER, filename)
+        file_deleted = False
+        if file_existed:
+            try:
+                os.remove(file_path)
+                file_deleted = True
+                print(f"Successfully deleted file: {file_path}")
+            except Exception as e:
+                print(f"Error deleting file {file_path}: {e}")
 
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        # Return success if either vector DB deletion worked or file was deleted
+        # This handles cases where Qdrant might not report deletions correctly
+        if num_deleted > 0 or file_deleted:
+            return max(num_deleted, 1)  # Return at least 1 if file was deleted
 
-        return num_deleted
+        return 0
 
     def search_documents(
         self,

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Button, 
+import {
+  Box,
+  Button,
   FormControl,
   FormLabel,
   Input,
@@ -13,7 +13,7 @@ import {
   Icon
 } from '@chakra-ui/react';
 import { FiUpload, FiFile } from 'react-icons/fi';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 const DocumentUpload = ({ onUploadSuccess }) => {
@@ -55,14 +55,14 @@ const DocumentUpload = ({ onUploadSuccess }) => {
 
     // Check file type
     const allowedTypes = [
-      'application/pdf', 
-      'text/plain', 
+      'application/pdf',
+      'text/plain',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword',
       'image/jpeg',
       'image/png'
     ];
-    
+
     if (!allowedTypes.includes(selectedFile.type)) {
       toast({
         title: 'Invalid file type',
@@ -79,15 +79,28 @@ const DocumentUpload = ({ onUploadSuccess }) => {
 
     try {
       const token = await getToken();
+
+      // Debug logging
+      console.log('Selected file:', selectedFile);
+      console.log('File name:', selectedFile.name);
+      console.log('File size:', selectedFile.size);
+      console.log('File type:', selectedFile.type);
+
       const formData = new FormData();
       formData.append('file', selectedFile);
+
+      // Debug FormData
+      console.log('FormData created');
+      for (let pair of formData.entries()) {
+        console.log('FormData entry:', pair[0], pair[1]);
+      }
 
       // Add metadata if needed
       // formData.append('metadata', JSON.stringify({ key: 'value' }));
 
-      const response = await api.post('/api/documents/upload', formData, {
+      const response = await api.post('/documents/upload', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
+          // Don't set Content-Type for multipart/form-data - let browser set it with boundary
           'Authorization': `Bearer ${token}`
         },
         onUploadProgress: (progressEvent) => {
@@ -108,7 +121,7 @@ const DocumentUpload = ({ onUploadSuccess }) => {
 
       // Reset form
       setSelectedFile(null);
-      
+
       // Call the success callback if provided
       if (onUploadSuccess) {
         onUploadSuccess(response.data);
@@ -131,7 +144,7 @@ const DocumentUpload = ({ onUploadSuccess }) => {
     <Box p={4} borderWidth="1px" borderRadius="lg" bg="white" shadow="md">
       <VStack spacing={4} align="stretch">
         <Text fontSize="xl" fontWeight="bold">Upload Document</Text>
-        
+
         <FormControl>
           <FormLabel>Select a document to upload</FormLabel>
           <Input

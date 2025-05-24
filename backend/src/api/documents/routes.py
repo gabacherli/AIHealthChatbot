@@ -28,6 +28,13 @@ def upload_document():
     Returns:
         A JSON response with the upload status.
     """
+    # Debug logging
+    print(f"Content-Type: {request.content_type}")
+    print(f"Request files: {request.files}")
+    print(f"Request form: {request.form}")
+    print(f"Request data: {request.data}")
+    print(f"Request json: {request.get_json(silent=True)}")
+
     # Check if the post request has the file part
     if 'file' not in request.files:
         return jsonify({"error": "No file part"}), 400
@@ -115,8 +122,13 @@ def download_document(filename):
         # Secure the filename
         secure_name = secure_filename(filename)
 
-        # User-specific upload directory
-        upload_dir = os.path.join(config.UPLOAD_FOLDER, user_id)
+        # User-specific upload directory (use absolute path)
+        upload_dir = os.path.abspath(os.path.join(config.UPLOAD_FOLDER, user_id))
+        file_path = os.path.join(upload_dir, secure_name)
+
+        # Check if file exists before sending
+        if not os.path.exists(file_path):
+            return jsonify({"error": f"File not found: {file_path}"}), 404
 
         return send_from_directory(
             upload_dir,

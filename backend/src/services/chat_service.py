@@ -39,8 +39,7 @@ def get_answer_with_context(question: str, role: str, user_id: str = None) -> tu
     # Retrieve context for the query
     search_results = document_service.search_documents(
         query=question,
-        filters=filters,
-        top_k=3
+        filters=filters
     )
 
     # Extract context text and sources

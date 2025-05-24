@@ -5,10 +5,6 @@ This module contains functions for processing documents of various formats.
 import os
 import re
 import io
-
-# We'll use pypdf instead of PyMuPDF for PDF processing
-fitz = None
-print("Using pypdf for PDF processing.")
 import numpy as np
 from PIL import Image
 from typing import List, Dict, Any, Tuple, Optional, Union

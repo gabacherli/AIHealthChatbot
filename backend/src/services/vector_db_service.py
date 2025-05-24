@@ -13,8 +13,29 @@ config = BaseConfig()
 class VectorDBService:
     """Service for interacting with the Qdrant vector database."""
 
+    _instance = None
+    _initialized = False
+    _lock = None
+
+    def __new__(cls):
+        """Implement singleton pattern to prevent multiple Qdrant instances."""
+        if cls._instance is None:
+            import threading
+            if cls._lock is None:
+                cls._lock = threading.Lock()
+
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(VectorDBService, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
         """Initialize the vector database service."""
+        # Only initialize once per process
+        if VectorDBService._initialized:
+            return
+
+        print("Initializing VectorDBService singleton...")
         self.collection_name = getattr(config, 'VECTOR_DB_COLLECTION', 'health_documents')
         self.vector_size = getattr(config, 'VECTOR_SIZE', 768)
         self.client = None
@@ -26,6 +47,9 @@ class VectorDBService:
             # Ensure collection exists
             if self.client:
                 self._ensure_collection()
+
+            VectorDBService._initialized = True
+            print("VectorDBService singleton initialized successfully")
         except Exception as e:
             print(f"Error initializing vector database: {e}")
             print("Vector database functionality will be limited")
@@ -51,10 +75,27 @@ class VectorDBService:
                 # Ensure the directory exists
                 os.makedirs(vector_db_local_path, exist_ok=True)
 
-                self.client = QdrantClient(
-                    path=vector_db_local_path
-                )
-                print(f"Connected to local Qdrant instance at {vector_db_local_path}")
+                # Try to connect with timeout and retry logic
+                import time
+                max_retries = 3
+                retry_delay = 2
+
+                for attempt in range(max_retries):
+                    try:
+                        self.client = QdrantClient(
+                            path=vector_db_local_path,
+                            timeout=30  # Add timeout
+                        )
+                        print(f"Connected to local Qdrant instance at {vector_db_local_path}")
+                        break
+                    except Exception as retry_error:
+                        print(f"Attempt {attempt + 1} failed: {retry_error}")
+                        if attempt < max_retries - 1:
+                            print(f"Retrying in {retry_delay} seconds...")
+                            time.sleep(retry_delay)
+                        else:
+                            raise retry_error
+
         except Exception as e:
             print(f"Failed to initialize Qdrant client: {e}")
             self.client = None
@@ -308,8 +349,19 @@ class VectorDBService:
                 )
             )
 
-            print(f"Deleted {result.deleted} points for source '{source}'")
-            return result.deleted
+            # Handle different Qdrant response formats
+            deleted_count = 0
+            if hasattr(result, 'deleted'):
+                deleted_count = result.deleted
+            elif hasattr(result, 'operation_id'):
+                # For async operations, assume success if no error
+                deleted_count = 1
+            else:
+                # If we can't determine count, assume success if no exception
+                deleted_count = 1
+
+            print(f"Deleted {deleted_count} points for source '{source}'")
+            return deleted_count
         except Exception as e:
             print(f"Error deleting by source: {e}")
             return 0
@@ -352,8 +404,19 @@ class VectorDBService:
                 )
             )
 
-            print(f"Deleted {result.deleted} points for source '{source}' and user '{user_id}'")
-            return result.deleted
+            # Handle different Qdrant response formats
+            deleted_count = 0
+            if hasattr(result, 'deleted'):
+                deleted_count = result.deleted
+            elif hasattr(result, 'operation_id'):
+                # For async operations, assume success if no error
+                deleted_count = 1
+            else:
+                # If we can't determine count, assume success if no exception
+                deleted_count = 1
+
+            print(f"Deleted {deleted_count} points for source '{source}' and user '{user_id}'")
+            return deleted_count
         except Exception as e:
             print(f"Error deleting by source and user: {e}")
             return 0

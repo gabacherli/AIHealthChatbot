@@ -40,7 +40,14 @@ def create_app(test_config=None):
     if not config.VECTOR_DB_URL and config.VECTOR_DB_LOCAL_PATH:
         os.makedirs(config.VECTOR_DB_LOCAL_PATH, exist_ok=True)
 
-    CORS(app)
+    # Configure CORS with explicit settings for development
+    CORS(app,
+         origins=["http://localhost:3000"],  # Allow React dev server
+         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         supports_credentials=True,
+         expose_headers=["Content-Range", "X-Content-Range"])
+
     JWTManager(app)
 
     register_error_handlers(app)

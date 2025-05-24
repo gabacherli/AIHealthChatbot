@@ -23,7 +23,7 @@ import {
   ModalCloseButton,
 } from '@chakra-ui/react';
 import { FiDownload, FiTrash2, FiFile, FiRefreshCw } from 'react-icons/fi';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 const DocumentList = ({ onDocumentDeleted }) => {
@@ -41,7 +41,7 @@ const DocumentList = ({ onDocumentDeleted }) => {
 
     try {
       const token = await getToken();
-      const response = await api.get('/api/documents/list', {
+      const response = await api.get('/documents/list', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -63,13 +63,13 @@ const DocumentList = ({ onDocumentDeleted }) => {
   const handleDownload = async (filename) => {
     try {
       const token = await getToken();
-      
+
       // Create a temporary anchor element
       const link = document.createElement('a');
-      link.href = `${api.defaults.baseURL}/api/documents/download/${filename}`;
+      link.href = `${api.defaults.baseURL}/documents/download/${filename}`;
       link.setAttribute('download', filename);
       link.setAttribute('target', '_blank');
-      
+
       // Add authorization header via fetch
       fetch(link.href, {
         headers: {
@@ -107,7 +107,7 @@ const DocumentList = ({ onDocumentDeleted }) => {
 
     try {
       const token = await getToken();
-      await api.delete(`/api/documents/delete/${selectedDocument.filename}`, {
+      await api.delete(`/documents/delete/${selectedDocument.filename}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -115,7 +115,7 @@ const DocumentList = ({ onDocumentDeleted }) => {
 
       // Remove the document from the list
       setDocuments(documents.filter(doc => doc.filename !== selectedDocument.filename));
-      
+
       toast({
         title: 'Document deleted',
         description: 'The document has been successfully deleted',
@@ -123,7 +123,7 @@ const DocumentList = ({ onDocumentDeleted }) => {
         duration: 3000,
         isClosable: true,
       });
-      
+
       // Call the callback if provided
       if (onDocumentDeleted) {
         onDocumentDeleted(selectedDocument);
@@ -166,9 +166,9 @@ const DocumentList = ({ onDocumentDeleted }) => {
     <Box>
       <HStack justifyContent="space-between" mb={4}>
         <Heading size="md">Your Documents</Heading>
-        <Button 
-          leftIcon={<FiRefreshCw />} 
-          size="sm" 
+        <Button
+          leftIcon={<FiRefreshCw />}
+          size="sm"
           onClick={fetchDocuments}
           colorScheme="blue"
           variant="outline"
@@ -184,10 +184,10 @@ const DocumentList = ({ onDocumentDeleted }) => {
       ) : (
         <VStack spacing={3} align="stretch">
           {documents.map((doc) => (
-            <Box 
-              key={doc.id || doc.filename} 
-              p={3} 
-              borderWidth="1px" 
+            <Box
+              key={doc.id || doc.filename}
+              p={3}
+              borderWidth="1px"
               borderRadius="md"
               _hover={{ bg: 'gray.50' }}
             >
@@ -202,18 +202,18 @@ const DocumentList = ({ onDocumentDeleted }) => {
                   </VStack>
                 </HStack>
                 <HStack>
-                  <Button 
-                    size="sm" 
-                    leftIcon={<FiDownload />} 
+                  <Button
+                    size="sm"
+                    leftIcon={<FiDownload />}
                     onClick={() => handleDownload(doc.filename)}
                     colorScheme="blue"
                     variant="ghost"
                   >
                     Download
                   </Button>
-                  <Button 
-                    size="sm" 
-                    leftIcon={<FiTrash2 />} 
+                  <Button
+                    size="sm"
+                    leftIcon={<FiTrash2 />}
                     onClick={() => confirmDelete(doc)}
                     colorScheme="red"
                     variant="ghost"
@@ -234,7 +234,7 @@ const DocumentList = ({ onDocumentDeleted }) => {
           <ModalHeader>Confirm Delete</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            Are you sure you want to delete the document 
+            Are you sure you want to delete the document
             <Text as="span" fontWeight="bold"> {selectedDocument?.filename}</Text>?
             This action cannot be undone.
           </ModalBody>

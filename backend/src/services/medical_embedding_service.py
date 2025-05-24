@@ -14,8 +14,29 @@ config = get_config()
 class MedicalEmbeddingService:
     """Service for generating embeddings for medical text and images."""
 
+    _instance = None
+    _initialized = False
+    _lock = None
+
+    def __new__(cls):
+        """Implement singleton pattern to prevent duplicate model loading."""
+        if cls._instance is None:
+            import threading
+            if cls._lock is None:
+                cls._lock = threading.Lock()
+
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(MedicalEmbeddingService, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
         """Initialize the embedding service with appropriate models."""
+        # Only initialize once per process
+        if MedicalEmbeddingService._initialized:
+            return
+
+        print("Initializing MedicalEmbeddingService singleton...")
         self.text_model_name = getattr(config, 'MEDICAL_TEXT_EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
         self.image_model_name = getattr(config, 'MEDICAL_IMAGE_EMBEDDING_MODEL', '')
         self.embedding_model = getattr(config, 'EMBEDDING_MODEL', 'all-MiniLM-L6-v2')
@@ -25,6 +46,9 @@ class MedicalEmbeddingService:
 
         # Initialize image embedding model if needed
         self._init_image_model()
+
+        MedicalEmbeddingService._initialized = True
+        print("MedicalEmbeddingService singleton initialized successfully")
 
     def _init_text_model(self):
         """Initialize the text embedding model."""
@@ -66,8 +90,14 @@ class MedicalEmbeddingService:
                 import torch
                 from transformers import AutoProcessor, AutoModel
 
-                self.image_processor = AutoProcessor.from_pretrained(self.image_model_name)
-                self.image_model = AutoModel.from_pretrained(self.image_model_name)
+                self.image_processor = AutoProcessor.from_pretrained(
+                    self.image_model_name,
+                    trust_remote_code=True
+                )
+                self.image_model = AutoModel.from_pretrained(
+                    self.image_model_name,
+                    trust_remote_code=True
+                )
                 self.has_image_model = True
                 print(f"Successfully loaded image model: {self.image_model_name}")
             except Exception as e:
