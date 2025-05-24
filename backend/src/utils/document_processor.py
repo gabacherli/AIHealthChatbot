@@ -5,6 +5,7 @@ This module contains functions for processing documents of various formats.
 import os
 import re
 import io
+import logging
 import numpy as np
 from PIL import Image
 from typing import List, Dict, Any, Tuple, Optional, Union
@@ -13,6 +14,9 @@ from docx import Document
 import pandas as pd
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from .medical_image_classifier import MedicalImageClassifier
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 class DocumentProcessor:
     """Document processor class for handling various document formats."""

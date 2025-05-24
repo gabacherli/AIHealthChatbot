@@ -3,6 +3,7 @@ Document routes.
 This module contains the routes for document management.
 """
 import os
+import logging
 from flask import Blueprint, request, jsonify, send_from_directory, current_app
 from flask_jwt_extended import jwt_required, get_jwt
 from werkzeug.utils import secure_filename
@@ -10,6 +11,9 @@ from ...services.document_service import DocumentService
 from ...config import get_config
 
 from . import documents_bp
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 config = get_config()
 document_service = DocumentService()
