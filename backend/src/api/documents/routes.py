@@ -32,20 +32,11 @@ def upload_document():
     Returns:
         A JSON response with the upload status.
     """
-    # Get user info first for debugging
+    # Get user info from JWT token
     claims = get_jwt()
-    user_id = claims.get("sub", "anonymous")
+    username = claims.get("sub", "anonymous")  # JWT sub contains username
+    user_id = claims.get("user_id", "anonymous")  # Get actual user ID from additional claims
     user_role = claims.get("role", "patient")
-
-    # Debug logging
-    logger.debug("=== UPLOAD DEBUG ===")
-    logger.debug(f"User ID: {user_id}")
-    logger.debug(f"User Role: {user_role}")
-    logger.debug(f"Content-Type: {request.content_type}")
-    logger.debug(f"Request files: {request.files}")
-    logger.debug(f"Request form: {request.form}")
-    logger.debug(f"Request data: {request.data}")
-    logger.debug(f"Request json: {request.get_json(silent=True)}")
 
     # Check if the post request has the file part
     if 'file' not in request.files:
@@ -60,12 +51,11 @@ def upload_document():
 
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        print(f"Processing file: {filename}")
 
         # Process the file
         try:
-            # Create user-specific upload directory if it doesn't exist
-            upload_dir = os.path.join(config.UPLOAD_FOLDER, user_id)
+            # Create user-specific upload directory if it doesn't exist (use username for folder)
+            upload_dir = os.path.join(config.UPLOAD_FOLDER, username)
             os.makedirs(upload_dir, exist_ok=True)
             # Save the file
             file_path = os.path.join(upload_dir, filename)
@@ -101,10 +91,11 @@ def list_documents():
     try:
         # Get user ID
         claims = get_jwt()
-        user_id = claims.get("sub", "anonymous")
+        username = claims.get("sub", "anonymous")  # JWT sub contains username
+        user_id = claims.get("user_id", "anonymous")  # Get actual user ID from additional claims
 
-        # Get documents for the user
-        documents = document_service.get_documents_by_user(user_id)
+        # Get documents for the user (use user_id for filtering)
+        documents = document_service.get_documents_by_user(str(user_id))
 
         return jsonify({"documents": documents})
     except Exception as e:
@@ -125,13 +116,14 @@ def download_document(filename):
     try:
         # Get user ID
         claims = get_jwt()
-        user_id = claims.get("sub", "anonymous")
+        username = claims.get("sub", "anonymous")  # JWT sub contains username
+        user_id = claims.get("user_id", "anonymous")  # Get actual user ID from additional claims
 
         # Secure the filename
         secure_name = secure_filename(filename)
 
         # First, try to get the file from the file system (standard approach)
-        upload_dir = os.path.abspath(os.path.join(config.UPLOAD_FOLDER, user_id))
+        upload_dir = os.path.abspath(os.path.join(config.UPLOAD_FOLDER, username))
         file_path = os.path.join(upload_dir, secure_name)
 
         if os.path.exists(file_path):
@@ -143,8 +135,8 @@ def download_document(filename):
             )
 
         # If file not found on disk, check if it's a medical image stored in the database
-        # Try to retrieve medical image data from the database
-        image_data = document_service.get_medical_image_data(secure_name, user_id)
+        # Try to retrieve medical image data from the database (use username for file path)
+        image_data = document_service.get_medical_image_data(secure_name, username)
 
         if image_data:
 

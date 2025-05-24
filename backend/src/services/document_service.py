@@ -177,12 +177,21 @@ class DocumentService:
         try:
             from qdrant_client.http import models
 
+            # Convert user_id to integer if it's a numeric string
+            # Documents are stored with integer user_ids
+            query_user_id = user_id
+            if isinstance(user_id, str) and user_id.isdigit():
+                query_user_id = int(user_id)
+            elif isinstance(user_id, str):
+                # If it's not a digit, try to handle it as is (for backward compatibility)
+                query_user_id = user_id
+
             # Create proper filter using Qdrant models
             filter_query = models.Filter(
                 must=[
                     models.FieldCondition(
                         key="metadata.user_id",
-                        match=models.MatchValue(value=user_id)
+                        match=models.MatchValue(value=query_user_id)
                     )
                 ]
             )
@@ -330,12 +339,17 @@ class DocumentService:
         try:
             from qdrant_client.http import models
 
+            # Convert user_id to integer if it's a numeric string
+            query_user_id = user_id
+            if isinstance(user_id, str) and user_id.isdigit():
+                query_user_id = int(user_id)
+
             # Search for the specific image document
             filter_query = models.Filter(
                 must=[
                     models.FieldCondition(
                         key="metadata.user_id",
-                        match=models.MatchValue(value=user_id)
+                        match=models.MatchValue(value=query_user_id)
                     ),
                     models.FieldCondition(
                         key="metadata.source",
