@@ -9,7 +9,7 @@ from ...services.audit_service import AuditService
 from ...models.database import User
 
 # Create blueprint
-sharing_bp = Blueprint("document_sharing", __name__, url_prefix="/documents")
+sharing_bp = Blueprint("document_sharing", __name__)
 
 # Initialize services
 document_sharing_service = DocumentSharingService()
@@ -79,13 +79,25 @@ def get_patient_shared_documents(patient_id):
         return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
 
-@sharing_bp.route("/professionals/<int:professional_id>/patient-documents", methods=["GET"])
-@jwt_required()
+@sharing_bp.route("/professionals/<int:professional_id>/patient-documents", methods=["GET", "OPTIONS"])
 def get_professional_patient_documents(professional_id):
     """
     Get all patient documents accessible to a healthcare professional.
     Only accessible by the professional themselves.
     """
+    # Handle CORS preflight request
+    if request.method == 'OPTIONS':
+        from flask import make_response
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add('Access-Control-Allow-Headers', "Content-Type,Authorization")
+        response.headers.add('Access-Control-Allow-Methods', "GET,OPTIONS")
+        return response
+
+    # Apply JWT requirement only for non-OPTIONS requests
+    from flask_jwt_extended import verify_jwt_in_request
+    verify_jwt_in_request()
+
     try:
         current_user = get_current_user()
         if not current_user:

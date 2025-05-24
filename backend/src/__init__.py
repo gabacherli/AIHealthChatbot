@@ -42,13 +42,31 @@ def create_app(test_config=None):
     if not config.VECTOR_DB_URL and config.VECTOR_DB_LOCAL_PATH:
         os.makedirs(config.VECTOR_DB_LOCAL_PATH, exist_ok=True)
 
-    # Configure CORS with explicit settings for development
+    # Configure CORS with explicit settings for development and Docker
     CORS(app,
-         origins=["http://localhost:3000"],  # Allow React dev server
-         allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-         supports_credentials=True,
-         expose_headers=["Content-Range", "X-Content-Range"])
+         origins=[
+             "http://localhost:3000",      # React dev server (local)
+             "http://127.0.0.1:3000",      # Alternative localhost
+             "http://frontend:3000",       # Docker container name
+             "http://0.0.0.0:3000",        # Docker host binding
+             "file://"                     # For local HTML files
+         ],
+         allow_headers=[
+             "Content-Type",
+             "Authorization",
+             "X-Requested-With",
+             "Accept",
+             "Origin",
+             "Access-Control-Request-Method",
+             "Access-Control-Request-Headers"
+         ],
+         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+         supports_credentials=False,  # Set to False to avoid credential issues
+         expose_headers=["Content-Range", "X-Content-Range"],
+         max_age=86400,  # Cache preflight requests for 24 hours
+         send_wildcard=False,
+         automatic_options=True  # Automatically handle OPTIONS requests
+    )
 
     # Initialize database
     db.init_app(app)

@@ -2,7 +2,9 @@ import axios from 'axios';
 
 // Create an axios instance with default config
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api`,
+  timeout: 30000, // 30 second timeout
+  withCredentials: false, // Don't send cookies with requests
   // Don't set default Content-Type - let each request set its own
 });
 
@@ -13,9 +15,53 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Add CORS headers
+    config.headers['Accept'] = 'application/json';
+    // Only set Content-Type if not already set (important for file uploads)
+    if (!config.headers['Content-Type'] && config.method !== 'get') {
+      config.headers['Content-Type'] = 'application/json';
+    }
+
+    console.log('API Request:', {
+      method: config.method?.toUpperCase(),
+      url: config.url,
+      baseURL: config.baseURL,
+      headers: config.headers
+    });
+
     return config;
   },
   (error) => {
+    console.error('Request interceptor error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add a response interceptor for better error handling
+api.interceptors.response.use(
+  (response) => {
+    console.log('API Response:', {
+      status: response.status,
+      url: response.config.url,
+      data: response.data
+    });
+    return response;
+  },
+  (error) => {
+    console.error('API Response Error:', {
+      message: error.message,
+      code: error.code,
+      status: error.response?.status,
+      url: error.config?.url,
+      headers: error.response?.headers
+    });
+
+    // Handle CORS errors specifically
+    if (error.code === 'ERR_NETWORK' && !error.response) {
+      console.error('CORS or network error detected');
+    }
+
     return Promise.reject(error);
   }
 );
@@ -123,7 +169,8 @@ export const documentService = {
       }
 
       // Use fetch with proper authentication
-      const response = await fetch(`http://localhost:5000/api/documents/download/${filename}`, {
+      const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+      const response = await fetch(`${baseURL}/api/documents/download/${filename}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -195,10 +242,29 @@ export const documentService = {
   getProfessionalPatientDocuments: async (professionalId, patientId = null) => {
     try {
       const params = patientId ? { patient_id: patientId } : {};
+      console.log('Requesting professional patient documents:', { professionalId, patientId, params });
+
       const response = await api.get(`/documents/professionals/${professionalId}/patient-documents`, { params });
+      console.log('Professional patient documents response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Get professional patient documents error:', error);
+
+      // Handle specific CORS errors
+      if (error.code === 'ERR_NETWORK' || error.message.includes('CORS')) {
+        throw { msg: 'Network connection error. Please check your connection and try again.' };
+      }
+
+      // Handle authentication errors
+      if (error.response?.status === 401) {
+        throw { msg: 'Authentication required. Please log in again.' };
+      }
+
+      // Handle authorization errors
+      if (error.response?.status === 403) {
+        throw { msg: 'Access denied. You do not have permission to view these documents.' };
+      }
+
       throw error.response ? error.response.data : { msg: 'Network error' };
     }
   },
