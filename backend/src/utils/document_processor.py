@@ -125,7 +125,7 @@ class DocumentProcessor:
                     })
 
         except Exception as e:
-            print(f"Error processing PDF with pypdf: {e}")
+            logger.error(f"Error processing PDF with pypdf: {e}", exc_info=True)
 
         return chunks
 
