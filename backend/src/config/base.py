@@ -4,10 +4,14 @@ This module contains the base configuration class that other environment-specifi
 configurations will inherit from.
 """
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from root-level .env file
+# Get the path to the root directory (two levels up from this file)
+root_dir = Path(__file__).parent.parent.parent.parent
+env_path = root_dir / '.env'
+load_dotenv(dotenv_path=env_path)
 
 class BaseConfig:
     """Base configuration class."""
