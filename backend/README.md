@@ -55,45 +55,124 @@ backend/
 
 ## Setup
 
-1. Create a virtual environment:
-   ```
-   python -m venv venv
-   ```
+### Prerequisites
 
-2. Activate the virtual environment:
-   - Windows: `venv\Scripts\activate`
-   - Unix/MacOS: `source venv/bin/activate`
+- Python 3.8+
+- pip
+- Virtual environment (recommended)
+- Qdrant vector database (via Docker or local installation)
 
-3. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+<details>
+<summary><strong>🐧 Linux / 🍎 macOS</strong></summary>
 
-4. Create a `.env` file with the following variables:
-   ```
-   FLASK_ENV=development
-   DEV_JWT_KEY=your-dev-jwt-key
-   DEV_OPENAI_KEY=your-openai-api-key
-   VECTOR_DB_URL=http://localhost:6333
-   VECTOR_DB_COLLECTION=health_documents
-   UPLOAD_FOLDER=uploads/
-   ```
+```bash
+# 1. Create a virtual environment
+python3 -m venv venv
+
+# 2. Activate the virtual environment
+source venv/bin/activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Create a .env file
+cat > .env << EOF
+FLASK_ENV=development
+DEV_JWT_KEY=your-dev-jwt-key
+DEV_OPENAI_KEY=your-openai-api-key
+VECTOR_DB_URL=http://localhost:6333
+VECTOR_DB_COLLECTION=health_documents
+UPLOAD_FOLDER=uploads/
+EOF
+```
+</details>
+
+<details>
+<summary><strong>🪟 Windows (PowerShell)</strong></summary>
+
+```powershell
+# 1. Create a virtual environment
+python -m venv venv
+
+# 2. Activate the virtual environment
+.\venv\Scripts\Activate.ps1
+
+# 3. Install dependencies
+pip install -r requirements.txt
+
+# 4. Create a .env file
+@"
+FLASK_ENV=development
+DEV_JWT_KEY=your-dev-jwt-key
+DEV_OPENAI_KEY=your-openai-api-key
+VECTOR_DB_URL=http://localhost:6333
+VECTOR_DB_COLLECTION=health_documents
+UPLOAD_FOLDER=uploads/
+"@ | Out-File -FilePath .env -Encoding utf8
+```
+</details>
+
+<details>
+<summary><strong>🪟 Windows (Command Prompt)</strong></summary>
+
+```cmd
+REM 1. Create a virtual environment
+python -m venv venv
+
+REM 2. Activate the virtual environment
+venv\Scripts\activate.bat
+
+REM 3. Install dependencies
+pip install -r requirements.txt
+
+REM 4. Create a .env file
+echo FLASK_ENV=development > .env
+echo DEV_JWT_KEY=your-dev-jwt-key >> .env
+echo DEV_OPENAI_KEY=your-openai-api-key >> .env
+echo VECTOR_DB_URL=http://localhost:6333 >> .env
+echo VECTOR_DB_COLLECTION=health_documents >> .env
+echo UPLOAD_FOLDER=uploads/ >> .env
+```
+</details>
 
 ## Running the Application
 
-Run the application with:
-```
+<details>
+<summary><strong>🐧 Linux / 🍎 macOS / 🪟 Windows</strong></summary>
+
+```bash
+# Run the application
 python app.py
 ```
+
+**Alternative Python commands:**
+```bash
+# Linux/macOS (if python3 is required)
+python3 app.py
+
+# Windows (if py launcher is available)
+py app.py
+```
+</details>
 
 The API will be available at `http://localhost:5000`.
 
 ## Running Tests
 
-Run tests with:
-```
+<details>
+<summary><strong>🐧 Linux / 🍎 macOS / 🪟 Windows</strong></summary>
+
+```bash
+# Run tests with pytest
 pytest
+
+# Run tests with coverage
+pytest --cov=src
+
+# Run specific test file
+pytest tests/test_specific.py
 ```
+</details>
 
 ## API Endpoints
 
