@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: health-chatbot-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    networks:
+      - health-chatbot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   backend:
     build:
       context: ./backend
@@ -17,10 +35,16 @@ services:
       - DEV_OPENAI_KEY=${DEV_OPENAI_KEY}
       - PROD_JWT_KEY=${PROD_JWT_KEY}
       - PROD_OPENAI_KEY=${PROD_OPENAI_KEY}
+      - VECTOR_DB_URL=http://qdrant:6333
+      - VECTOR_DB_COLLECTION=health_documents
     ports:
       - "5000:5000"
     volumes:
       - ./backend/data:/app/data:ro
+      - backend-uploads:/app/uploads
+    depends_on:
+      qdrant:
+        condition: service_healthy
     networks:
       - health-chatbot-network
     healthcheck:
@@ -56,4 +80,8 @@ networks:
 
 volumes:
   backend-data:
+    driver: local
+  backend-uploads:
+    driver: local
+  qdrant-data:
     driver: local

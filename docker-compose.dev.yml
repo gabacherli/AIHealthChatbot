@@ -1,6 +1,24 @@
 version: '3.8'
 
 services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: health-chatbot-qdrant-dev
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant-data-dev:/qdrant/storage
+    networks:
+      - health-chatbot-network
+    healthcheck:
+      test: ["CMD", "sh", "-c", "test -f /qdrant/storage/meta.json"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
   backend:
     build:
       context: ./backend
@@ -15,12 +33,16 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - DEV_JWT_KEY=${DEV_JWT_KEY:-dev-jwt-key}
       - DEV_OPENAI_KEY=${DEV_OPENAI_KEY}
+      - VECTOR_DB_URL=http://qdrant:6333
+      - VECTOR_DB_COLLECTION=health_documents
     ports:
       - "5000:5000"
     volumes:
       - ./backend:/app
       - /app/venv
       - /app/__pycache__
+    depends_on:
+      - qdrant
     networks:
       - health-chatbot-network
     command: ["python", "app.py"]
@@ -48,3 +70,7 @@ services:
 networks:
   health-chatbot-network:
     driver: bridge
+
+volumes:
+  qdrant-data-dev:
+    driver: local

@@ -29,11 +29,19 @@
   color: white;
   margin-right: 1.5rem;
   text-decoration: none;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
 }
 
 .nav a:hover {
   opacity: 0.8;
+}
+
+.nav a.active {
+  background-color: #3498db;
+  color: white;
+  opacity: 1;
 }
 
 .logout-button {
@@ -62,4 +70,17 @@
   text-align: center;
   color: #718096;
   font-size: 0.875rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.footer p {
+  margin: 0.25rem 0;
+}
+
+.user-role {
+  font-size: 0.8rem;
+  opacity: 0.8;
+  margin-top: 0.5rem;
 }

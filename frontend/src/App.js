@@ -8,6 +8,9 @@ import Chat from './components/Chat';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
+// Pages
+import DocumentsPage from './pages/DocumentsPage';
+
 // Context
 import { AuthProvider } from './context/AuthContext';
 
@@ -23,6 +26,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Chat />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documents"
+              element={
+                <ProtectedRoute>
+                  <DocumentsPage />
                 </ProtectedRoute>
               }
             />

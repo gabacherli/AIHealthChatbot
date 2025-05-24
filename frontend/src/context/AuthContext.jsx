@@ -48,11 +48,17 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  // Get token function
+  const getToken = () => {
+    return authService.getToken();
+  };
+
   // Context values to be provided
   const value = {
     user,
     login,
     logout,
+    getToken,
     isAuthenticated: !!user,
     loading
   };

@@ -68,7 +68,8 @@ const Chat = () => {
       const botMessage = {
         text: response.answer,
         sender: 'bot',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        sources: response.sources || []
       };
 
       setMessages(prev => [...prev, botMessage]);
@@ -115,7 +116,22 @@ const Chat = () => {
             >
               <div className="message-content">
                 {msg.sender === 'bot' ? (
-                  <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  <>
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                    {msg.sources && msg.sources.length > 0 && (
+                      <div className="message-sources">
+                        <div className="sources-header">Sources:</div>
+                        <ul className="sources-list">
+                          {msg.sources.map((source, idx) => (
+                            <li key={idx} className="source-item">
+                              <span className="source-name">{source.filename || source.source}</span>
+                              {source.page && <span className="source-page">Page {source.page}</span>}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   msg.text
                 )}
