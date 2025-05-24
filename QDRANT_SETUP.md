@@ -20,7 +20,7 @@ The Qdrant vector database has been decoupled from the Flask application and now
 
 ### Qdrant Service
 - **Image**: `qdrant/qdrant:latest`
-- **Ports**: 
+- **Ports**:
   - `6333`: HTTP API
   - `6334`: gRPC API
 - **Volume**: `qdrant-data-dev` (persistent storage)
@@ -72,10 +72,11 @@ python test_new_setup.py
 
 ## Service URLs
 
-- **Frontend**: http://localhost:3000
+- **Frontend**: http://localhost:3000 (development) or http://localhost (production)
 - **Backend API**: http://localhost:5000
 - **Qdrant API**: http://localhost:6333
 - **Qdrant Web UI**: http://localhost:6333/dashboard
+- **Qdrant gRPC**: localhost:6334
 
 ## Benefits of New Setup
 

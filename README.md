@@ -4,21 +4,26 @@ A chatbot application for health-related questions with role-based responses for
 
 ## Project Overview
 
-This project consists of a Flask backend API and a React frontend. The backend uses OpenAI's API to generate responses to health-related questions, with context-specific retrieval based on the user's role (patient or healthcare professional).
+This project consists of a Flask backend API, React frontend, and Qdrant vector database. The backend uses OpenAI's API to generate responses to health-related questions, with intelligent document retrieval and medical image processing capabilities. The system provides context-specific responses based on user roles and uploaded medical documents.
 
 ## Project Structure
 
-The project is organized into two main directories:
+The project is organized into three main components:
 
-- `backend/`: Contains the Flask API
-- `frontend/`: Contains the React application
+- `backend/`: Flask API with medical image processing and vector database integration
+- `frontend/`: React application with Chakra UI components
+- `docker-compose.yml`: Multi-service orchestration including Qdrant vector database
 
 ## Features
 
-- **Authentication**: Login with username and password
+- **Authentication**: Secure login with username and password
 - **Role-based responses**: Different responses for patients and healthcare professionals
-- **Context-specific retrieval**: Retrieves relevant context for answering questions
-- **Chat interface**: User-friendly chat interface for asking questions
+- **Document Management**: Upload, store, and search medical documents and images
+- **Medical Image Processing**: Advanced support for DICOM files, X-rays, CT scans, MRI images
+- **Vector Search**: Intelligent document retrieval using Qdrant vector database
+- **Context-aware Chat**: AI responses enhanced with relevant document context
+- **Modern UI**: Clean, responsive interface built with Chakra UI
+- **Containerized Deployment**: Full Docker support for easy deployment
 
 ## Getting Started
 
@@ -109,17 +114,63 @@ For detailed Docker instructions, see [DOCKER_README.md](DOCKER_README.md).
 
 ## Usage
 
-1. Open your browser and navigate to `http://localhost:3000`
-2. Login with one of the demo accounts:
-   - Patient: username: gabriel / password: gabriel123
-   - Professional: username: drmurilo / password: drmurilo123
-3. Start chatting with the health chatbot
+1. **Access the Application**:
+   - Docker: Navigate to `http://localhost` (production) or `http://localhost:3000` (development)
+   - Manual setup: Navigate to `http://localhost:3000`
+
+2. **Login** with one of the demo accounts:
+   - **Patient**: username: `gabriel` / password: `gabriel123`
+   - **Healthcare Professional**: username: `drmurilo` / password: `drmurilo123`
+
+3. **Chat Interface**:
+   - Ask health-related questions and receive AI-powered responses
+   - Responses are tailored to your role (patient vs. professional)
+   - View sources and references for AI responses
+
+4. **Document Management**:
+   - Upload medical documents (PDF, DOCX, images)
+   - Upload medical images (DICOM, X-rays, CT scans, MRI)
+   - Search through uploaded documents
+   - Download and manage your document library
+
+## Application Architecture
+
+The application consists of three main services:
+
+- **Frontend** (React + Chakra UI): User interface on port 3000 (dev) or 80 (prod)
+- **Backend** (Flask API): REST API on port 5000
+- **Qdrant** (Vector Database): Document search and retrieval on port 6333
 
 ## Project Organization
 
 This project follows best practices for both Flask and React:
 
 - **Flask**: Organized using the application factory pattern with blueprints for different features
-- **React**: Organized using a feature-based approach with atomic design principles for components
+- **React**: Feature-based organization with Chakra UI components and atomic design principles
+- **Docker**: Multi-service architecture with health checks and dependency management
+- **Vector Database**: Qdrant for efficient document storage and semantic search
+
+## Key Technologies
+
+- **Backend**: Flask, OpenAI API, Qdrant, PyTorch, Transformers
+- **Frontend**: React, Chakra UI, React Router, Axios
+- **Medical Processing**: PyDICOM, SimpleITK, MedMNIST, PIL
+- **Infrastructure**: Docker, Docker Compose, Nginx
+
+## Documentation
+
+### Setup and Deployment
+- [Docker Deployment Guide](DOCKER_README.md) - Complete Docker setup instructions
+- [Qdrant Setup Guide](QDRANT_SETUP.md) - Vector database configuration
+- [Containerization Summary](CONTAINERIZATION_SUMMARY.md) - Architecture overview
+
+### API and Development
+- [API Documentation](API_DOCUMENTATION.md) - Complete REST API reference
+- [Backend Documentation](backend/README.md) - Backend architecture and services
+- [Frontend Documentation](frontend/README.md) - UI components and React structure
+
+### Medical Features
+- [Medical Image Features](MEDICAL_IMAGE_FEATURES.md) - Medical image processing capabilities
+- [Medical Image Testing](backend/test_medical_images/README.md) - Testing medical image classification
 
 For more details, see the README files in the `backend/` and `frontend/` directories.

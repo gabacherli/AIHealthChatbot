@@ -28,16 +28,17 @@ The AI Health Chatbot application has been successfully containerized using Dock
    - Volume mounting for live updates
 
 4. **docker-compose.yml** - Production orchestration
-   - Backend and frontend services
-   - Health checks and dependencies
+   - Backend, frontend, and Qdrant services
+   - Health checks and service dependencies
    - Environment variable configuration
-   - Network isolation
-   - Volume mounting for data
+   - Network isolation and service communication
+   - Persistent volume mounting for data
 
 5. **docker-compose.dev.yml** - Development orchestration
    - Development-specific configurations
    - Volume mounting for hot reloading
    - Development environment variables
+   - Qdrant service integration
 
 ### Configuration Files
 
@@ -108,14 +109,14 @@ The AI Health Chatbot application has been successfully containerized using Dock
 
 ### Production Architecture
 ```
-┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │    Backend      │
-│   (Nginx)       │    │    (Flask)      │
-│   Port 80       │────│   Port 5000     │
-└─────────────────┘    └─────────────────┘
-         │                       │
-         └───────────────────────┘
-              Docker Network
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │    │    Backend      │    │     Qdrant      │
+│   (Nginx)       │    │    (Flask)      │    │ (Vector DB)     │
+│   Port 80       │────│   Port 5000     │────│   Port 6333     │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         └───────────────────────┼───────────────────────┘
+                          Docker Network
 ```
 
 ### Key Features

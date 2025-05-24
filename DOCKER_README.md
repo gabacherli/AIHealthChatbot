@@ -25,7 +25,7 @@ This guide explains how to run the AI Health Chatbot application using Docker an
    ```bash
    # Required
    OPENAI_API_KEY=your-openai-api-key-here
-   
+
    # Optional (will use defaults if not provided)
    SECRET_KEY=your-secret-key-here
    JWT_SECRET_KEY=your-jwt-secret-key-here
@@ -96,15 +96,18 @@ docker-compose up -d --scale backend=2
 
 ## Service Architecture
 
-- **Frontend**: React app served by Nginx on port 80
+- **Frontend**: React app served by Nginx on port 80 (production) or port 3000 (development)
 - **Backend**: Flask API on port 5000
+- **Qdrant**: Vector database on port 6333 (HTTP) and 6334 (gRPC)
 - **Network**: Internal Docker network for service communication
+- **Volumes**: Persistent storage for Qdrant data and uploaded files
 
 ## Health Checks
 
-Both services include health checks:
-- Backend: `GET /api/health`
-- Frontend: HTTP check on port 80
+All services include health checks:
+- **Backend**: `GET /api/health`
+- **Frontend**: HTTP check on port 80
+- **Qdrant**: Storage metadata check and HTTP API availability
 
 ## Troubleshooting
 
@@ -117,17 +120,32 @@ docker-compose ps
 ```bash
 docker-compose logs backend
 docker-compose logs frontend
+docker-compose logs qdrant
 ```
 
 ### Restart a service
 ```bash
 docker-compose restart backend
+docker-compose restart qdrant
 ```
 
 ### Access service shell
 ```bash
 docker-compose exec backend bash
 docker-compose exec frontend sh
+docker-compose exec qdrant sh
+```
+
+### Check Qdrant status
+```bash
+# Check Qdrant health
+curl http://localhost:6333/health
+
+# View collections
+curl http://localhost:6333/collections
+
+# Access Qdrant web UI
+open http://localhost:6333/dashboard
 ```
 
 ## Production Deployment
