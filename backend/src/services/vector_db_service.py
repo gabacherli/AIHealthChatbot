@@ -5,7 +5,7 @@ This module contains functions for interacting with the Qdrant vector database.
 import os
 import uuid
 import numpy as np
-from typing import List, Dict, Any, Optional, Union, Tuple
+from typing import List, Dict, Any, Optional
 from ..config.base import BaseConfig
 
 config = BaseConfig()
@@ -35,7 +35,6 @@ class VectorDBService:
         if VectorDBService._initialized:
             return
 
-        print("Initializing VectorDBService singleton...")
         self.collection_name = getattr(config, 'VECTOR_DB_COLLECTION', 'health_documents')
         self.vector_size = getattr(config, 'VECTOR_SIZE', 768)
         self.client = None
@@ -49,10 +48,8 @@ class VectorDBService:
                 self._ensure_collection()
 
             VectorDBService._initialized = True
-            print("VectorDBService singleton initialized successfully")
         except Exception as e:
-            print(f"Error initializing vector database: {e}")
-            print("Vector database functionality will be limited")
+            logger.exception("Failed to initialize VectorDBService: %s", e)
 
     def _init_client(self):
         """Initialize the Qdrant client."""
@@ -69,7 +66,6 @@ class VectorDBService:
                     url=vector_db_url,
                     api_key=vector_db_api_key
                 )
-                print(f"Connected to remote Qdrant instance at {vector_db_url}")
             else:
                 # Use local Qdrant instance
                 # Ensure the directory exists
@@ -86,18 +82,14 @@ class VectorDBService:
                             path=vector_db_local_path,
                             timeout=30  # Add timeout
                         )
-                        print(f"Connected to local Qdrant instance at {vector_db_local_path}")
                         break
                     except Exception as retry_error:
-                        print(f"Attempt {attempt + 1} failed: {retry_error}")
                         if attempt < max_retries - 1:
-                            print(f"Retrying in {retry_delay} seconds...")
                             time.sleep(retry_delay)
                         else:
                             raise retry_error
 
-        except Exception as e:
-            print(f"Failed to initialize Qdrant client: {e}")
+        except Exception:
             self.client = None
 
     def _ensure_collection(self):
@@ -122,14 +114,11 @@ class VectorDBService:
                         indexing_threshold=0  # Index immediately
                     )
                 )
-                print(f"Created collection '{self.collection_name}' in Qdrant")
 
                 # Create payload indexes for efficient filtering
                 self._create_payload_indexes()
-            else:
-                print(f"Collection '{self.collection_name}' already exists in Qdrant")
-        except Exception as e:
-            print(f"Error ensuring collection exists: {e}")
+        except Exception:
+            pass
 
     def _create_payload_indexes(self):
         """Create payload indexes for efficient filtering."""
@@ -167,9 +156,8 @@ class VectorDBService:
                 field_schema=models.PayloadSchemaType.KEYWORD
             )
 
-            print("Created payload indexes for efficient filtering")
-        except Exception as e:
-            print(f"Error creating payload indexes: {e}")
+        except Exception:
+            pass
 
     def store_embeddings(self, chunks: List[Dict[str, Any]]) -> List[str]:
         """
@@ -181,11 +169,7 @@ class VectorDBService:
         Returns:
             List of IDs for the stored points.
         """
-        print(f"=== STORING EMBEDDINGS ===")
-        print(f"Received {len(chunks)} chunks to store")
-
         if not self.client:
-            print("Vector database client not initialized, cannot store embeddings")
             return []
 
         try:
@@ -194,20 +178,13 @@ class VectorDBService:
             points = []
             ids = []
 
-            for i, chunk in enumerate(chunks):
-                print(f"Processing chunk {i+1} for storage")
-                print(f"  Content: {chunk.get('content', '')[:50]}...")
-                print(f"  Metadata keys: {list(chunk.get('metadata', {}).keys())}")
-                print(f"  Has embedding: {'embedding' in chunk}")
-
+            for chunk in chunks:
                 if "embedding" not in chunk:
-                    print(f"  Skipping chunk {i+1} - no embedding")
                     continue
 
                 # Generate a unique ID
                 point_id = str(uuid.uuid4())
                 ids.append(point_id)
-                print(f"  Generated point ID: {point_id}")
 
                 # Prepare metadata for storage (handle binary data properly)
                 storage_metadata = chunk["metadata"].copy()
@@ -226,12 +203,10 @@ class VectorDBService:
                         import base64
                         storage_metadata["image_data_base64"] = base64.b64encode(image_data).decode('utf-8')
                         storage_metadata["image_storage_method"] = "base64_embedded"
-                        print(f"  Stored image data as base64 ({image_size} bytes)")
                     else:
                         # For larger images, rely on file system storage
                         storage_metadata["image_storage_method"] = "file_system"
                         storage_metadata["image_file_size"] = image_size
-                        print(f"  Large image ({image_size} bytes) - relying on file system storage")
 
                     storage_metadata["has_image_data"] = True
 
@@ -246,24 +221,16 @@ class VectorDBService:
                 )
 
                 points.append(point)
-                print(f"  Created point for chunk {i+1}")
 
             # Store points in batches
             if points:
-                print(f"Storing {len(points)} points in Qdrant collection '{self.collection_name}'")
                 self.client.upsert(
                     collection_name=self.collection_name,
                     points=points
                 )
-                print(f"Successfully stored {len(points)} embeddings in Qdrant")
-            else:
-                print("No points to store!")
 
             return ids
-        except Exception as e:
-            print(f"Error storing embeddings: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
             return []
 
     def search_similar(
