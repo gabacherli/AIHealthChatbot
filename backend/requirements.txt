@@ -2,7 +2,6 @@ flask
 flask-cors
 flask-jwt-extended
 openai
-faiss-cpu
 sentence-transformers
 # sglang  # Temporarily commented out due to Windows long path issue
 python-dotenv
@@ -10,7 +9,6 @@ qdrant-client
 pypdf
 python-docx
 pillow
-langchain
 transformers
 torch
 scikit-learn

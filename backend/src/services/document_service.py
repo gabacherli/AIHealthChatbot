@@ -43,36 +43,24 @@ class DocumentService:
         Returns:
             The ID of the processed document.
         """
-        print(f"=== PROCESS AND STORE DOCUMENT DEBUG ===")
-        print(f"File path: {file_path}")
-        print(f"Filename: {filename}")
-        print(f"User role: {user_role}")
-        print(f"User ID: {user_id}")
-
         # Process the document into chunks
         chunks = self.document_processor.process_file(file_path)
-        print(f"Generated {len(chunks)} chunks from document")
 
         # Add user role and user ID to metadata
-        for i, chunk in enumerate(chunks):
+        for chunk in chunks:
             chunk["metadata"]["user_role"] = user_role
             chunk["metadata"]["source"] = filename
             if user_id:
                 chunk["metadata"]["user_id"] = user_id
-            print(f"Chunk {i+1} metadata: {chunk['metadata']}")
 
         # Generate embeddings for the chunks
         chunks_with_embeddings = self.embedding_service.embed_document_chunks(chunks)
-        print(f"Generated embeddings for {len(chunks_with_embeddings)} chunks")
 
         # Store the chunks in the vector database
         chunk_ids = self.vector_db_service.store_embeddings(chunks_with_embeddings)
-        print(f"Stored chunks with IDs: {chunk_ids}")
 
         # Return a document ID (using the first chunk ID)
-        document_id = chunk_ids[0] if chunk_ids else str(uuid.uuid4())
-        print(f"Returning document ID: {document_id}")
-        return document_id
+        return chunk_ids[0] if chunk_ids else str(uuid.uuid4())
 
     def process_and_store_document_bytes(
         self,
@@ -150,8 +138,6 @@ class DocumentService:
                     )
                 ]
             )
-            print(f"Filter query: {filter_query}")
-
             # Use scroll to get all points efficiently
             scroll_result = self.vector_db_service.client.scroll(
                 collection_name=self.vector_db_service.collection_name,
@@ -169,7 +155,6 @@ class DocumentService:
             iteration = 0
             while points and iteration < max_iterations:
                 iteration += 1
-                print(f"Processing batch {iteration} with {len(points)} points")
 
                 for point in points:
                     if "metadata" in point.payload and "source" in point.payload["metadata"]:
@@ -203,7 +188,6 @@ class DocumentService:
 
                 # Check if there are more points to fetch
                 if next_page_offset is None:
-                    print("No more pages to fetch")
                     break
 
                 # Get next batch
@@ -221,16 +205,13 @@ class DocumentService:
 
                     # If no new points, break
                     if not points:
-                        print("No more points returned")
                         break
 
-                except Exception as scroll_error:
-                    print(f"Error in scroll pagination: {scroll_error}")
+                except Exception:
                     break
 
             return list(documents.values())
-        except Exception as e:
-            print(f"Error getting documents by user: {e}")
+        except Exception:
             return []
 
     def delete_document(self, filename: str, user_id: Optional[str] = None) -> int:
@@ -266,9 +247,8 @@ class DocumentService:
             try:
                 os.remove(file_path)
                 file_deleted = True
-                print(f"Successfully deleted file: {file_path}")
-            except Exception as e:
-                print(f"Error deleting file {file_path}: {e}")
+            except Exception:
+                pass
 
         # Return success if either vector DB deletion worked or file was deleted
         # This handles cases where Qdrant might not report deletions correctly
@@ -320,7 +300,6 @@ class DocumentService:
 
             points = scroll_result[0]
             if not points:
-                print(f"No image found for filename: {filename}, user: {user_id}")
                 return None
 
             point = points[0]
@@ -334,7 +313,6 @@ class DocumentService:
                     import base64
                     return base64.b64decode(image_data_base64)
                 else:
-                    print(f"Base64 image data not found for {filename}")
                     return None
 
             elif storage_method == "file_system":
@@ -348,15 +326,12 @@ class DocumentService:
                     with open(file_path, 'rb') as f:
                         return f.read()
                 else:
-                    print(f"Image file not found on disk: {file_path}")
                     return None
 
             else:
-                print(f"Unknown storage method: {storage_method}")
                 return None
 
-        except Exception as e:
-            print(f"Error retrieving medical image data: {e}")
+        except Exception:
             return None
 
     def search_documents(
