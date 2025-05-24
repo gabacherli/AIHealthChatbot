@@ -48,8 +48,8 @@ class VectorDBService:
                 self._ensure_collection()
 
             VectorDBService._initialized = True
-        except Exception:
-            pass
+        except Exception as e:
+            logger.exception("Failed to initialize VectorDBService: %s", e)
 
     def _init_client(self):
         """Initialize the Qdrant client."""
