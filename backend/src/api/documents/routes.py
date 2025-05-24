@@ -34,14 +34,14 @@ def upload_document():
     user_role = claims.get("role", "patient")
 
     # Debug logging
-    print(f"=== UPLOAD DEBUG ===")
-    print(f"User ID: {user_id}")
-    print(f"User Role: {user_role}")
-    print(f"Content-Type: {request.content_type}")
-    print(f"Request files: {request.files}")
-    print(f"Request form: {request.form}")
-    print(f"Request data: {request.data}")
-    print(f"Request json: {request.get_json(silent=True)}")
+    logger.debug("=== UPLOAD DEBUG ===")
+    logger.debug(f"User ID: {user_id}")
+    logger.debug(f"User Role: {user_role}")
+    logger.debug(f"Content-Type: {request.content_type}")
+    logger.debug(f"Request files: {request.files}")
+    logger.debug(f"Request form: {request.form}")
+    logger.debug(f"Request data: {request.data}")
+    logger.debug(f"Request json: {request.get_json(silent=True)}")
 
     # Check if the post request has the file part
     if 'file' not in request.files:
