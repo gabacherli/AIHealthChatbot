@@ -12,6 +12,7 @@ from pypdf import PdfReader
 from docx import Document
 import pandas as pd
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from .medical_image_classifier import MedicalImageClassifier
 
 class DocumentProcessor:
     """Document processor class for handling various document formats."""
@@ -32,6 +33,8 @@ class DocumentProcessor:
             length_function=len,
             separators=["\n\n", "\n", ". ", " ", ""]
         )
+        # Initialize the enhanced medical image classifier
+        self.medical_image_classifier = MedicalImageClassifier()
 
     def process_file(self, file_path: str) -> List[Dict[str, Any]]:
         """
@@ -54,7 +57,7 @@ class DocumentProcessor:
             return self._process_docx(file_path, file_name)
         elif file_ext in ['.csv', '.xlsx', '.xls']:
             return self._process_tabular(file_path, file_name)
-        elif file_ext in ['.png', '.jpg', '.jpeg']:
+        elif file_ext in ['.png', '.jpg', '.jpeg', '.dcm', '.dicom', '.ima', '.img']:
             return self._process_image(file_path, file_name)
         else:
             raise ValueError(f"Unsupported file format: {file_ext}")
@@ -80,7 +83,7 @@ class DocumentProcessor:
             return self._process_docx_bytes(file_bytes, file_name)
         elif file_ext in ['.csv', '.xlsx', '.xls']:
             return self._process_tabular_bytes(file_bytes, file_name)
-        elif file_ext in ['.png', '.jpg', '.jpeg']:
+        elif file_ext in ['.png', '.jpg', '.jpeg', '.dcm', '.dicom', '.ima', '.img']:
             return self._process_image_bytes(file_bytes, file_name)
         else:
             raise ValueError(f"Unsupported file format: {file_ext}")
@@ -197,13 +200,23 @@ class DocumentProcessor:
             return self._process_image_bytes(f.read(), file_name)
 
     def _process_image_bytes(self, file_bytes: bytes, file_name: str) -> List[Dict[str, Any]]:
-        """Process image bytes."""
+        """Process image bytes with enhanced medical context using advanced medical image classifier."""
+        # Use the enhanced medical image classifier
+        image_analysis = self.medical_image_classifier.analyze_medical_image(file_bytes, file_name)
+
+        # Create comprehensive medical description
+        content_description = self.medical_image_classifier.create_medical_description(file_name, image_analysis)
+
         chunks = [{
-            "content": f"[Image: {file_name}]",
+            "content": content_description,
             "metadata": {
                 "source": file_name,
                 "content_type": "image",
-                "image_data": file_bytes
+                "image_data": file_bytes,
+                "image_info": image_analysis,  # Now contains comprehensive analysis
+                "medical_context": True,
+                "is_dicom": image_analysis.get('is_dicom', False),
+                "medical_type": image_analysis.get('medical_type', 'medical_image')
             }
         }]
 

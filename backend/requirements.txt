@@ -4,7 +4,7 @@ flask-jwt-extended
 openai
 faiss-cpu
 sentence-transformers
-sglang
+# sglang  # Temporarily commented out due to Windows long path issue
 python-dotenv
 qdrant-client
 pypdf
@@ -19,3 +19,9 @@ pandas
 werkzeug
 tqdm
 PyMuPDF==1.22.5
+
+# Medical imaging libraries
+pydicom
+SimpleITK
+medmnist
+nibabel

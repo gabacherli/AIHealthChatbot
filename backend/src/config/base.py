@@ -43,7 +43,8 @@ class BaseConfig:
     UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER", "uploads/")
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload size
     ALLOWED_EXTENSIONS = {
-        'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx', 'doc', 'csv', 'xlsx', 'xls'
+        'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx', 'doc', 'csv', 'xlsx', 'xls',
+        'dcm', 'dicom', 'ima', 'img'  # DICOM medical image formats
     }
 
     # Application settings

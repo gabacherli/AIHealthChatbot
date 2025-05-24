@@ -43,24 +43,36 @@ class DocumentService:
         Returns:
             The ID of the processed document.
         """
+        print(f"=== PROCESS AND STORE DOCUMENT DEBUG ===")
+        print(f"File path: {file_path}")
+        print(f"Filename: {filename}")
+        print(f"User role: {user_role}")
+        print(f"User ID: {user_id}")
+
         # Process the document into chunks
         chunks = self.document_processor.process_file(file_path)
+        print(f"Generated {len(chunks)} chunks from document")
 
         # Add user role and user ID to metadata
-        for chunk in chunks:
+        for i, chunk in enumerate(chunks):
             chunk["metadata"]["user_role"] = user_role
             chunk["metadata"]["source"] = filename
             if user_id:
                 chunk["metadata"]["user_id"] = user_id
+            print(f"Chunk {i+1} metadata: {chunk['metadata']}")
 
         # Generate embeddings for the chunks
         chunks_with_embeddings = self.embedding_service.embed_document_chunks(chunks)
+        print(f"Generated embeddings for {len(chunks_with_embeddings)} chunks")
 
         # Store the chunks in the vector database
         chunk_ids = self.vector_db_service.store_embeddings(chunks_with_embeddings)
+        print(f"Stored chunks with IDs: {chunk_ids}")
 
         # Return a document ID (using the first chunk ID)
-        return chunk_ids[0] if chunk_ids else str(uuid.uuid4())
+        document_id = chunk_ids[0] if chunk_ids else str(uuid.uuid4())
+        print(f"Returning document ID: {document_id}")
+        return document_id
 
     def process_and_store_document_bytes(
         self,
@@ -119,6 +131,9 @@ class DocumentService:
         Returns:
             A list of documents with metadata.
         """
+        print(f"=== GET DOCUMENTS BY USER DEBUG ===")
+        print(f"Requested user_id: {user_id}")
+
         if not self.vector_db_service.client:
             print("Vector database client not available, returning empty list")
             return []
@@ -135,6 +150,7 @@ class DocumentService:
                     )
                 ]
             )
+            print(f"Filter query: {filter_query}")
 
             # Use scroll to get all points efficiently
             scroll_result = self.vector_db_service.client.scroll(
@@ -159,13 +175,30 @@ class DocumentService:
                     if "metadata" in point.payload and "source" in point.payload["metadata"]:
                         source = point.payload["metadata"]["source"]
                         if source not in documents:
+                            # Prepare metadata for document listing
+                            metadata = {
+                                k: v for k, v in point.payload["metadata"].items()
+                                if k not in ["chunk", "total_chunks", "page", "image_data_base64"]
+                            }
+
+                            # Add image retrieval information for medical images
+                            if point.payload["metadata"].get("content_type") == "image":
+                                metadata["is_medical_image"] = True
+                                metadata["image_available"] = True
+
+                                # Indicate how the image can be retrieved
+                                storage_method = point.payload["metadata"].get("image_storage_method", "file_system")
+                                metadata["image_storage_method"] = storage_method
+
+                                if storage_method == "base64_embedded":
+                                    metadata["image_embedded"] = True
+                                elif storage_method == "file_system":
+                                    metadata["image_file_available"] = True
+
                             documents[source] = {
                                 "filename": source,
                                 "id": point.id,
-                                "metadata": {
-                                    k: v for k, v in point.payload["metadata"].items()
-                                    if k not in ["chunk", "total_chunks", "page"]
-                                }
+                                "metadata": metadata
                             }
 
                 # Check if there are more points to fetch
@@ -243,6 +276,88 @@ class DocumentService:
             return max(num_deleted, 1)  # Return at least 1 if file was deleted
 
         return 0
+
+    def get_medical_image_data(self, filename: str, user_id: str) -> Optional[bytes]:
+        """
+        Retrieve medical image data for a specific file.
+
+        Args:
+            filename: The name of the image file.
+            user_id: The ID of the user who owns the image.
+
+        Returns:
+            The image data as bytes, or None if not found.
+        """
+        try:
+            from qdrant_client.http import models
+
+            # Search for the specific image document
+            filter_query = models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="metadata.user_id",
+                        match=models.MatchValue(value=user_id)
+                    ),
+                    models.FieldCondition(
+                        key="metadata.source",
+                        match=models.MatchValue(value=filename)
+                    ),
+                    models.FieldCondition(
+                        key="metadata.content_type",
+                        match=models.MatchValue(value="image")
+                    )
+                ]
+            )
+
+            # Search for the image document
+            scroll_result = self.vector_db_service.client.scroll(
+                collection_name=self.vector_db_service.collection_name,
+                limit=1,
+                with_payload=True,
+                with_vectors=False,
+                scroll_filter=filter_query
+            )
+
+            points = scroll_result[0]
+            if not points:
+                print(f"No image found for filename: {filename}, user: {user_id}")
+                return None
+
+            point = points[0]
+            metadata = point.payload.get("metadata", {})
+            storage_method = metadata.get("image_storage_method", "file_system")
+
+            if storage_method == "base64_embedded":
+                # Retrieve from base64 encoded data
+                image_data_base64 = metadata.get("image_data_base64")
+                if image_data_base64:
+                    import base64
+                    return base64.b64decode(image_data_base64)
+                else:
+                    print(f"Base64 image data not found for {filename}")
+                    return None
+
+            elif storage_method == "file_system":
+                # Retrieve from file system
+                from ..config import get_config
+                config = get_config()
+
+                import os
+                file_path = os.path.join(config.UPLOAD_FOLDER, user_id, filename)
+                if os.path.exists(file_path):
+                    with open(file_path, 'rb') as f:
+                        return f.read()
+                else:
+                    print(f"Image file not found on disk: {file_path}")
+                    return None
+
+            else:
+                print(f"Unknown storage method: {storage_method}")
+                return None
+
+        except Exception as e:
+            print(f"Error retrieving medical image data: {e}")
+            return None
 
     def search_documents(
         self,

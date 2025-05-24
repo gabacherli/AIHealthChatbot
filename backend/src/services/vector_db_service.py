@@ -181,6 +181,9 @@ class VectorDBService:
         Returns:
             List of IDs for the stored points.
         """
+        print(f"=== STORING EMBEDDINGS ===")
+        print(f"Received {len(chunks)} chunks to store")
+
         if not self.client:
             print("Vector database client not initialized, cannot store embeddings")
             return []
@@ -191,13 +194,46 @@ class VectorDBService:
             points = []
             ids = []
 
-            for chunk in chunks:
+            for i, chunk in enumerate(chunks):
+                print(f"Processing chunk {i+1} for storage")
+                print(f"  Content: {chunk.get('content', '')[:50]}...")
+                print(f"  Metadata keys: {list(chunk.get('metadata', {}).keys())}")
+                print(f"  Has embedding: {'embedding' in chunk}")
+
                 if "embedding" not in chunk:
+                    print(f"  Skipping chunk {i+1} - no embedding")
                     continue
 
                 # Generate a unique ID
                 point_id = str(uuid.uuid4())
                 ids.append(point_id)
+                print(f"  Generated point ID: {point_id}")
+
+                # Prepare metadata for storage (handle binary data properly)
+                storage_metadata = chunk["metadata"].copy()
+
+                # Handle image data properly for medical compliance
+                if "image_data" in storage_metadata:
+                    # For medical images, we need to preserve the data but handle JSON serialization
+                    # Option 1: Store file path reference (images are already saved to disk)
+                    # Option 2: Use base64 encoding for smaller images
+                    # Option 3: Store in separate blob storage
+
+                    image_data = storage_metadata.pop("image_data")
+                    image_size = len(image_data)
+
+                    if image_size < 1024 * 1024:  # Less than 1MB - use base64 encoding
+                        import base64
+                        storage_metadata["image_data_base64"] = base64.b64encode(image_data).decode('utf-8')
+                        storage_metadata["image_storage_method"] = "base64_embedded"
+                        print(f"  Stored image data as base64 ({image_size} bytes)")
+                    else:
+                        # For larger images, rely on file system storage
+                        storage_metadata["image_storage_method"] = "file_system"
+                        storage_metadata["image_file_size"] = image_size
+                        print(f"  Large image ({image_size} bytes) - relying on file system storage")
+
+                    storage_metadata["has_image_data"] = True
 
                 # Create the point
                 point = PointStruct(
@@ -205,23 +241,29 @@ class VectorDBService:
                     vector=chunk["embedding"].tolist(),
                     payload={
                         "content": chunk["content"],
-                        "metadata": chunk["metadata"]
+                        "metadata": storage_metadata
                     }
                 )
 
                 points.append(point)
+                print(f"  Created point for chunk {i+1}")
 
             # Store points in batches
             if points:
+                print(f"Storing {len(points)} points in Qdrant collection '{self.collection_name}'")
                 self.client.upsert(
                     collection_name=self.collection_name,
                     points=points
                 )
-                print(f"Stored {len(points)} embeddings in Qdrant")
+                print(f"Successfully stored {len(points)} embeddings in Qdrant")
+            else:
+                print("No points to store!")
 
             return ids
         except Exception as e:
             print(f"Error storing embeddings: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
     def search_similar(
