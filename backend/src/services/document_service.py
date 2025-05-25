@@ -109,6 +109,58 @@ class DocumentService:
         """
         return self.vector_db_service.get_all_sources()
 
+
+
+    def get_document_metadata(self, document_id: str) -> Optional[Dict]:
+        """
+        Get metadata for a specific document.
+
+        Args:
+            document_id: The ID of the document
+
+        Returns:
+            Document metadata dictionary or None
+        """
+        try:
+            # Get document from vector database by ID
+            points = self.vector_db_service.client.retrieve(
+                collection_name=self.vector_db_service.collection_name,
+                ids=[document_id]
+            )
+
+            if points and len(points) > 0:
+                point = points[0]
+                metadata = point.payload.get("metadata", {})
+
+                # Base metadata
+                result = {
+                    "id": point.id,
+                    "source": metadata.get("source"),
+                    "content_type": metadata.get("content_type", "unknown"),
+                    "user_id": metadata.get("user_id"),
+                    "user_role": metadata.get("user_role"),
+                    "upload_date": metadata.get("upload_date"),
+                    "filename": metadata.get("source")
+                }
+
+                # Add medical keywords if available
+                if metadata.get("medical_keywords"):
+                    result["medical_keywords"] = metadata.get("medical_keywords")
+                    result["keywords_count"] = metadata.get("keywords_count", 0)
+
+                # Add medical context information
+                if metadata.get("medical_context"):
+                    result["medical_context"] = True
+                    result["medical_type"] = metadata.get("medical_type")
+                    result["is_dicom"] = metadata.get("is_dicom", False)
+
+                return result
+
+            return None
+
+        except Exception as e:
+            return None
+
     def get_documents_by_user(self, user_id: str) -> List[Dict[str, Any]]:
         """
         Get all documents for a specific user.
@@ -119,25 +171,31 @@ class DocumentService:
         Returns:
             A list of documents with metadata.
         """
-        print(f"=== GET DOCUMENTS BY USER DEBUG ===")
-        print(f"Requested user_id: {user_id}")
-
         if not self.vector_db_service.client:
-            print("Vector database client not available, returning empty list")
             return []
 
         try:
             from qdrant_client.http import models
+
+            # Convert user_id to integer if it's a numeric string
+            # Documents are stored with integer user_ids
+            query_user_id = user_id
+            if isinstance(user_id, str) and user_id.isdigit():
+                query_user_id = int(user_id)
+            elif isinstance(user_id, str):
+                # If it's not a digit, try to handle it as is (for backward compatibility)
+                query_user_id = user_id
 
             # Create proper filter using Qdrant models
             filter_query = models.Filter(
                 must=[
                     models.FieldCondition(
                         key="metadata.user_id",
-                        match=models.MatchValue(value=user_id)
+                        match=models.MatchValue(value=query_user_id)
                     )
                 ]
             )
+
             # Use scroll to get all points efficiently
             scroll_result = self.vector_db_service.client.scroll(
                 collection_name=self.vector_db_service.collection_name,
@@ -156,14 +214,14 @@ class DocumentService:
             while points and iteration < max_iterations:
                 iteration += 1
 
-                for point in points:
+                for i, point in enumerate(points):
                     if "metadata" in point.payload and "source" in point.payload["metadata"]:
                         source = point.payload["metadata"]["source"]
                         if source not in documents:
                             # Prepare metadata for document listing
                             metadata = {
                                 k: v for k, v in point.payload["metadata"].items()
-                                if k not in ["chunk", "total_chunks", "page", "image_data_base64"]
+                                if k not in ["chunk", "total_chunks", "page", "image_data_base64", "image_data"]
                             }
 
                             # Add image retrieval information for medical images
@@ -179,6 +237,16 @@ class DocumentService:
                                     metadata["image_embedded"] = True
                                 elif storage_method == "file_system":
                                     metadata["image_file_available"] = True
+
+                                # Include medical keywords and context for medical images
+                                if point.payload["metadata"].get("medical_keywords"):
+                                    metadata["medical_keywords"] = point.payload["metadata"]["medical_keywords"]
+                                    metadata["keywords_count"] = point.payload["metadata"].get("keywords_count", 0)
+
+                                if point.payload["metadata"].get("medical_context"):
+                                    metadata["medical_context"] = True
+                                    metadata["medical_type"] = point.payload["metadata"].get("medical_type")
+                                    metadata["is_dicom"] = point.payload["metadata"].get("is_dicom", False)
 
                             documents[source] = {
                                 "filename": source,
@@ -211,7 +279,7 @@ class DocumentService:
                     break
 
             return list(documents.values())
-        except Exception:
+        except Exception as e:
             return []
 
     def delete_document(self, filename: str, user_id: Optional[str] = None) -> int:
@@ -234,6 +302,7 @@ class DocumentService:
         file_existed = os.path.exists(file_path)
 
         # Delete the document from the vector database
+        num_deleted = 0
         if user_id:
             # Delete only documents owned by the user
             num_deleted = self.vector_db_service.delete_by_source_and_user(filename, user_id)
@@ -247,15 +316,17 @@ class DocumentService:
             try:
                 os.remove(file_path)
                 file_deleted = True
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to delete file from disk: {file_path}, error: {e}")
+                file_deleted = False
 
         # Return success if either vector DB deletion worked or file was deleted
         # This handles cases where Qdrant might not report deletions correctly
-        if num_deleted > 0 or file_deleted:
-            return max(num_deleted, 1)  # Return at least 1 if file was deleted
+        total_deleted = max(num_deleted, 1 if file_deleted else 0)
 
-        return 0
+        return total_deleted
 
     def get_medical_image_data(self, filename: str, user_id: str) -> Optional[bytes]:
         """
@@ -271,12 +342,17 @@ class DocumentService:
         try:
             from qdrant_client.http import models
 
+            # Convert user_id to integer if it's a numeric string
+            query_user_id = user_id
+            if isinstance(user_id, str) and user_id.isdigit():
+                query_user_id = int(user_id)
+
             # Search for the specific image document
             filter_query = models.Filter(
                 must=[
                     models.FieldCondition(
                         key="metadata.user_id",
-                        match=models.MatchValue(value=user_id)
+                        match=models.MatchValue(value=query_user_id)
                     ),
                     models.FieldCondition(
                         key="metadata.source",

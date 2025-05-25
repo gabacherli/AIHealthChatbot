@@ -4,7 +4,7 @@ This module contains the routes for document management.
 """
 import os
 import logging
-from flask import Blueprint, request, jsonify, send_from_directory, current_app
+from flask import request, jsonify, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt
 from werkzeug.utils import secure_filename
 from ...services.document_service import DocumentService
@@ -32,20 +32,11 @@ def upload_document():
     Returns:
         A JSON response with the upload status.
     """
-    # Get user info first for debugging
+    # Get user info from JWT token
     claims = get_jwt()
-    user_id = claims.get("sub", "anonymous")
+    username = claims.get("sub", "anonymous")  # JWT sub contains username
+    user_id = claims.get("user_id", "anonymous")  # Get actual user ID from additional claims
     user_role = claims.get("role", "patient")
-
-    # Debug logging
-    logger.debug("=== UPLOAD DEBUG ===")
-    logger.debug(f"User ID: {user_id}")
-    logger.debug(f"User Role: {user_role}")
-    logger.debug(f"Content-Type: {request.content_type}")
-    logger.debug(f"Request files: {request.files}")
-    logger.debug(f"Request form: {request.form}")
-    logger.debug(f"Request data: {request.data}")
-    logger.debug(f"Request json: {request.get_json(silent=True)}")
 
     # Check if the post request has the file part
     if 'file' not in request.files:
@@ -60,29 +51,23 @@ def upload_document():
 
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        print(f"Processing file: {filename}")
 
         # Process the file
         try:
-            # Create user-specific upload directory if it doesn't exist
-            upload_dir = os.path.join(config.UPLOAD_FOLDER, user_id)
+            # Create user-specific upload directory if it doesn't exist (use username for folder)
+            upload_dir = os.path.join(config.UPLOAD_FOLDER, username)
             os.makedirs(upload_dir, exist_ok=True)
-            print(f"Upload directory: {upload_dir}")
-
             # Save the file
             file_path = os.path.join(upload_dir, filename)
             file.save(file_path)
-            print(f"File saved to: {file_path}")
 
             # Process and store the document
-            print(f"Processing document with user_id={user_id}, user_role={user_role}")
             document_id = document_service.process_and_store_document(
                 file_path,
                 filename,
                 user_role=user_role,
                 user_id=user_id
             )
-            print(f"Document processed successfully, ID: {document_id}")
 
             return jsonify({
                 "message": "Document uploaded and processed successfully",
@@ -90,9 +75,6 @@ def upload_document():
                 "filename": filename
             })
         except Exception as e:
-            print(f"Error processing document: {e}")
-            import traceback
-            traceback.print_exc()
             return jsonify({"error": str(e)}), 500
 
     return jsonify({"error": "File type not allowed"}), 400
@@ -109,21 +91,13 @@ def list_documents():
     try:
         # Get user ID
         claims = get_jwt()
-        user_id = claims.get("sub", "anonymous")
+        user_id = claims.get("user_id", "anonymous")  # Get actual user ID from additional claims
 
-        print(f"=== LIST DOCUMENTS DEBUG ===")
-        print(f"User ID: {user_id}")
-
-        # Get documents for the user
-        documents = document_service.get_documents_by_user(user_id)
-        print(f"Found {len(documents)} documents for user {user_id}")
-        print(f"Documents: {documents}")
+        # Get documents for the user (use user_id for filtering)
+        documents = document_service.get_documents_by_user(str(user_id))
 
         return jsonify({"documents": documents})
     except Exception as e:
-        print(f"Error listing documents: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @documents_bp.route("/download/<filename>", methods=["GET"])
@@ -141,13 +115,13 @@ def download_document(filename):
     try:
         # Get user ID
         claims = get_jwt()
-        user_id = claims.get("sub", "anonymous")
+        username = claims.get("sub", "anonymous")  # JWT sub contains username
 
         # Secure the filename
         secure_name = secure_filename(filename)
 
         # First, try to get the file from the file system (standard approach)
-        upload_dir = os.path.abspath(os.path.join(config.UPLOAD_FOLDER, user_id))
+        upload_dir = os.path.abspath(os.path.join(config.UPLOAD_FOLDER, username))
         file_path = os.path.join(upload_dir, secure_name)
 
         if os.path.exists(file_path):
@@ -159,13 +133,10 @@ def download_document(filename):
             )
 
         # If file not found on disk, check if it's a medical image stored in the database
-        print(f"File not found on disk: {file_path}, checking database for medical image...")
-
-        # Try to retrieve medical image data from the database
-        image_data = document_service.get_medical_image_data(secure_name, user_id)
+        # Try to retrieve medical image data from the database (use username for file path)
+        image_data = document_service.get_medical_image_data(secure_name, username)
 
         if image_data:
-            print(f"Retrieved medical image from database: {len(image_data)} bytes")
 
             # Determine content type based on file extension
             file_ext = secure_name.lower().split('.')[-1] if '.' in secure_name else ''
@@ -194,9 +165,6 @@ def download_document(filename):
         return jsonify({"error": f"Medical image not found: {secure_name}"}), 404
 
     except Exception as e:
-        print(f"Error downloading document: {e}")
-        import traceback
-        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @documents_bp.route("/delete/<filename>", methods=["DELETE"])
@@ -212,26 +180,48 @@ def delete_document(filename):
         A JSON response with the deletion status.
     """
     try:
-        # Get user ID for authorization
+        # Get user info from JWT token - use same logic as upload and list
         claims = get_jwt()
-        user_id = claims.get("sub", "anonymous")
+        user_id = claims.get("user_id", "anonymous")  # Get actual user ID from additional claims
 
         # Secure the filename
         secure_name = secure_filename(filename)
 
-        # Delete the document
-        num_deleted = document_service.delete_document(secure_name, user_id)
+        # Check if document exists before deletion attempt
+        documents_before = document_service.get_documents_by_user(str(user_id))
+        doc_exists = any(doc['filename'] == secure_name for doc in documents_before)
 
-        if num_deleted > 0:
-            return jsonify({
-                "message": "Document deleted successfully",
-                "chunks_deleted": num_deleted
-            })
-        else:
+        if not doc_exists:
             return jsonify({
                 "error": "Document not found or you do not have permission to delete it"
             }), 404
+
+        # Delete the document using the same user_id format as used in listing
+        num_deleted = document_service.delete_document(secure_name, str(user_id))
+
+        # Verify deletion by checking if document still exists
+        documents_after = document_service.get_documents_by_user(str(user_id))
+        doc_still_exists = any(doc['filename'] == secure_name for doc in documents_after)
+
+        if num_deleted > 0 and not doc_still_exists:
+            return jsonify({
+                "message": "Document deleted successfully",
+                "chunks_deleted": num_deleted,
+                "verified": True
+            })
+        elif not doc_still_exists:
+            # Document was deleted but count might be wrong
+            return jsonify({
+                "message": "Document deleted successfully",
+                "chunks_deleted": 1,
+                "verified": True
+            })
+        else:
+            return jsonify({
+                "error": "Document deletion failed - document still exists"
+            }), 500
     except Exception as e:
+        logger.error(f"Error deleting document {filename}: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @documents_bp.route("/search", methods=["POST"])

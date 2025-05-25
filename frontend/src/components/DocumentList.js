@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Button,
@@ -183,31 +183,47 @@ const DocumentList = ({ onDocumentDeleted }) => {
   const deleteButtonHoverBg = useColorModeValue('red.50', 'red.900');
   const deleteButtonFocusBoxShadow = useColorModeValue('red.200', 'red.600');
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
       const token = await getToken();
+
       const response = await api.get('/documents/list', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      setDocuments(response.data.documents || []);
+      const docs = response.data.documents || [];
+      setDocuments(docs);
       setLastRefreshed(new Date());
     } catch (err) {
-      console.error('Error fetching documents:', err);
+      console.error('❌ Error fetching documents:', err);
       setError('Failed to load documents. Please try again later.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDocuments();
-  }, []);
+  }, [fetchDocuments]);
+
+  // Add a method to manually refresh documents
+  const refreshDocuments = useCallback(() => {
+    fetchDocuments();
+  }, [fetchDocuments]);
+
+  // Expose refresh method to parent component
+  useEffect(() => {
+    window.refreshDocumentList = refreshDocuments;
+
+    return () => {
+      delete window.refreshDocumentList;
+    };
+  }, [refreshDocuments]);
 
   const handleDownload = async (filename) => {
     try {
@@ -256,29 +272,49 @@ const DocumentList = ({ onDocumentDeleted }) => {
 
     try {
       const token = await getToken();
-      await api.delete(`/documents/delete/${selectedDocument.filename}`, {
+      const response = await api.delete(`/documents/delete/${selectedDocument.filename}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      // Remove the document from the list
-      setDocuments(documents.filter(doc => doc.filename !== selectedDocument.filename));
+      // Check if deletion was verified by the server
+      const deletionVerified = response.data?.verified || false;
 
-      toast({
-        title: 'Document deleted',
-        description: 'The document has been successfully deleted',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      if (deletionVerified) {
+        // Refresh the document list from the server to ensure consistency
+        await fetchDocuments();
 
-      // Call the callback if provided
-      if (onDocumentDeleted) {
-        onDocumentDeleted(selectedDocument);
+        toast({
+          title: 'Document deleted',
+          description: 'The document has been successfully deleted',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+
+        // Call the callback if provided
+        if (onDocumentDeleted) {
+          onDocumentDeleted(selectedDocument);
+        }
+      } else {
+        // Server reported deletion but couldn't verify - still refresh but show warning
+        await fetchDocuments();
+
+        toast({
+          title: 'Deletion status unclear',
+          description: 'Please refresh to verify the document was deleted',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
       }
     } catch (err) {
       console.error('Error deleting document:', err);
+
+      // Always refresh the list to show current state
+      await fetchDocuments();
+
       toast({
         title: 'Delete failed',
         description: err.response?.data?.error || 'Failed to delete the document',

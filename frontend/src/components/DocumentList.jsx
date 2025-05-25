@@ -8,11 +8,19 @@ const DocumentList = ({ onDocumentDeleted }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { user } = useAuth();
-  
+
   useEffect(() => {
     fetchDocuments();
   }, []);
-  
+
+  // Expose refresh method globally
+  useEffect(() => {
+    window.refreshDocumentList = fetchDocuments;
+    return () => {
+      delete window.refreshDocumentList;
+    };
+  }, []);
+
   const fetchDocuments = async () => {
     try {
       setLoading(true);
@@ -26,7 +34,7 @@ const DocumentList = ({ onDocumentDeleted }) => {
       setLoading(false);
     }
   };
-  
+
   const handleDownload = async (filename) => {
     try {
       await documentService.downloadDocument(filename);
@@ -35,13 +43,13 @@ const DocumentList = ({ onDocumentDeleted }) => {
       setError('Failed to download document. Please try again.');
     }
   };
-  
+
   const handleDelete = async (filename) => {
     if (window.confirm(`Are you sure you want to delete ${filename}?`)) {
       try {
         await documentService.deleteDocument(filename);
         setDocuments(documents.filter(doc => doc !== filename));
-        
+
         if (onDocumentDeleted) {
           onDocumentDeleted(filename);
         }
@@ -51,17 +59,17 @@ const DocumentList = ({ onDocumentDeleted }) => {
       }
     }
   };
-  
+
   if (loading) {
     return <div className="document-list-loading">Loading documents...</div>;
   }
-  
+
   return (
     <div className="document-list">
       <h3>Uploaded Documents</h3>
-      
+
       {error && <div className="document-list-error">{error}</div>}
-      
+
       {documents.length === 0 ? (
         <div className="no-documents">
           <p>No documents have been uploaded yet.</p>
@@ -74,18 +82,18 @@ const DocumentList = ({ onDocumentDeleted }) => {
                 <i className="document-icon"></i>
                 {filename}
               </div>
-              
+
               <div className="document-actions">
-                <button 
+                <button
                   onClick={() => handleDownload(filename)}
                   className="action-button download-button"
                   title="Download document"
                 >
                   Download
                 </button>
-                
+
                 {user?.role === 'professional' && (
-                  <button 
+                  <button
                     onClick={() => handleDelete(filename)}
                     className="action-button delete-button"
                     title="Delete document"
@@ -98,9 +106,9 @@ const DocumentList = ({ onDocumentDeleted }) => {
           ))}
         </ul>
       )}
-      
-      <button 
-        onClick={fetchDocuments} 
+
+      <button
+        onClick={fetchDocuments}
         className="refresh-button"
         title="Refresh document list"
       >

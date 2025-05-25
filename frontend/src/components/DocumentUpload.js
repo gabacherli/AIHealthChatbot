@@ -139,23 +139,8 @@ const DocumentUpload = ({ onUploadSuccess }) => {
     try {
       const token = await getToken();
 
-      // Debug logging
-      console.log('Selected file:', selectedFile);
-      console.log('File name:', selectedFile.name);
-      console.log('File size:', selectedFile.size);
-      console.log('File type:', selectedFile.type);
-
       const formData = new FormData();
       formData.append('file', selectedFile);
-
-      // Debug FormData
-      console.log('FormData created');
-      for (let pair of formData.entries()) {
-        console.log('FormData entry:', pair[0], pair[1]);
-      }
-
-      // Add metadata if needed
-      // formData.append('metadata', JSON.stringify({ key: 'value' }));
 
       const response = await api.post('/documents/upload', formData, {
         headers: {
@@ -178,6 +163,11 @@ const DocumentUpload = ({ onUploadSuccess }) => {
         isClosable: true,
       });
 
+      // Trigger refresh of document list
+      if (window.refreshDocumentList) {
+        window.refreshDocumentList();
+      }
+
       // Set success state
       setUploadSuccess(true);
 
@@ -193,7 +183,8 @@ const DocumentUpload = ({ onUploadSuccess }) => {
         onUploadSuccess(response.data);
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('❌ Upload error:', error);
+
       toast({
         title: 'Upload failed',
         description: error.response?.data?.error || 'An error occurred during upload',

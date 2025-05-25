@@ -16,7 +16,7 @@ const DocumentUpload = ({ onUploadSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!file) {
       setError('Please select a file to upload');
       return;
@@ -24,17 +24,17 @@ const DocumentUpload = ({ onUploadSuccess }) => {
 
     // Check file type
     const allowedTypes = [
-      'text/plain', 
-      'application/pdf', 
-      'image/png', 
-      'image/jpeg', 
+      'text/plain',
+      'application/pdf',
+      'image/png',
+      'image/jpeg',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword',
       'text/csv',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'application/vnd.ms-excel'
     ];
-    
+
     if (!allowedTypes.includes(file.type)) {
       setError('File type not supported. Please upload a PDF, TXT, DOCX, PNG, JPG, CSV, or XLSX file.');
       return;
@@ -64,22 +64,27 @@ const DocumentUpload = ({ onUploadSuccess }) => {
 
       // Upload the file
       const response = await documentService.uploadDocument(formData);
-      
+
       clearInterval(progressInterval);
       setProgress(100);
-      
+
       // Reset form
       setFile(null);
       setUploading(false);
-      
+
       // Notify parent component
       if (onUploadSuccess) {
         onUploadSuccess(response);
       }
-      
+
+      // Also trigger global refresh
+      if (window.refreshDocumentList) {
+        window.refreshDocumentList();
+      }
+
       // Reset progress after a delay
       setTimeout(() => setProgress(0), 1000);
-      
+
     } catch (error) {
       console.error('Error uploading document:', error);
       setError(error.msg || 'Failed to upload document. Please try again.');
@@ -91,7 +96,7 @@ const DocumentUpload = ({ onUploadSuccess }) => {
   return (
     <div className="document-upload">
       <h3>Upload Document</h3>
-      
+
       <form onSubmit={handleSubmit} className="upload-form">
         <div className="file-input-container">
           <input
@@ -105,27 +110,27 @@ const DocumentUpload = ({ onUploadSuccess }) => {
             {file ? file.name : 'Choose a file'}
           </label>
         </div>
-        
+
         {progress > 0 && (
           <div className="progress-container">
-            <div 
-              className="progress-bar" 
+            <div
+              className="progress-bar"
               style={{ width: `${progress}%` }}
             ></div>
           </div>
         )}
-        
+
         {error && <div className="error-message">{error}</div>}
-        
-        <button 
-          type="submit" 
+
+        <button
+          type="submit"
           disabled={!file || uploading}
           className="upload-button"
         >
           {uploading ? 'Uploading...' : 'Upload'}
         </button>
       </form>
-      
+
       <div className="upload-info">
         <p>Supported file types: PDF, TXT, DOCX, PNG, JPG, CSV, XLSX</p>
         <p>Maximum file size: 16MB</p>

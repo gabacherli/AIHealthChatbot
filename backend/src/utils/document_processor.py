@@ -211,6 +211,10 @@ class DocumentProcessor:
         # Create comprehensive medical description
         content_description = self.medical_image_classifier.create_medical_description(file_name, image_analysis)
 
+        # Extract medical keywords separately for easy access
+        medical_type = image_analysis.get('medical_type', 'medical_image')
+        medical_keywords = self.medical_image_classifier._generate_medical_keywords(medical_type, image_analysis)
+
         chunks = [{
             "content": content_description,
             "metadata": {
@@ -220,7 +224,9 @@ class DocumentProcessor:
                 "image_info": image_analysis,  # Now contains comprehensive analysis
                 "medical_context": True,
                 "is_dicom": image_analysis.get('is_dicom', False),
-                "medical_type": image_analysis.get('medical_type', 'medical_image')
+                "medical_type": medical_type,
+                "medical_keywords": medical_keywords,  # Add keywords as separate field
+                "keywords_count": len(medical_keywords) if medical_keywords else 0
             }
         }]
 

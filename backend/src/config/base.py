@@ -4,10 +4,14 @@ This module contains the base configuration class that other environment-specifi
 configurations will inherit from.
 """
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from root-level .env file
+# Get the path to the root directory (two levels up from this file)
+root_dir = Path(__file__).parent.parent.parent.parent
+env_path = root_dir / '.env'
+load_dotenv(dotenv_path=env_path)
 
 class BaseConfig:
     """Base configuration class."""
@@ -46,6 +50,10 @@ class BaseConfig:
         'txt', 'pdf', 'png', 'jpg', 'jpeg', 'docx', 'doc', 'csv', 'xlsx', 'xls',
         'dcm', 'dicom', 'ima', 'img'  # DICOM medical image formats
     }
+
+    # Database settings
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///health_chatbot.db")
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Application settings
     CHUNK_DATA_PATH = "data/"

@@ -3,10 +3,14 @@ Vector database service.
 This module contains functions for interacting with the Qdrant vector database.
 """
 import os
+import logging
 import uuid
 import numpy as np
 from typing import List, Dict, Any, Optional
 from ..config.base import BaseConfig
+
+# Set up logging
+logger = logging.getLogger(__name__)
 
 config = BaseConfig()
 
@@ -230,7 +234,7 @@ class VectorDBService:
                 )
 
             return ids
-        except Exception:
+        except Exception as e:
             return []
 
     def search_similar(
@@ -251,7 +255,6 @@ class VectorDBService:
             List of similar documents with scores.
         """
         if not self.client:
-            print("Vector database client not initialized, cannot search")
             return []
 
         try:
@@ -313,16 +316,21 @@ class VectorDBService:
             # Format the results
             results = []
             for scored_point in search_result:
+                # Prepare metadata, excluding large binary data
+                metadata = {
+                    k: v for k, v in scored_point.payload["metadata"].items()
+                    if k not in ["image_data", "image_data_base64"]
+                }
+
                 results.append({
                     "id": scored_point.id,
                     "content": scored_point.payload["content"],
-                    "metadata": scored_point.payload["metadata"],
+                    "metadata": metadata,
                     "score": scored_point.score
                 })
 
             return results
         except Exception as e:
-            print(f"Error searching similar documents: {e}")
             return []
 
     def delete_by_source(self, source: str) -> int:
@@ -336,7 +344,6 @@ class VectorDBService:
             Number of points deleted.
         """
         if not self.client:
-            print("Vector database client not initialized, cannot delete")
             return 0
 
         try:
@@ -369,10 +376,8 @@ class VectorDBService:
                 # If we can't determine count, assume success if no exception
                 deleted_count = 1
 
-            print(f"Deleted {deleted_count} points for source '{source}'")
             return deleted_count
         except Exception as e:
-            print(f"Error deleting by source: {e}")
             return 0
 
     def delete_by_source_and_user(self, source: str, user_id: str) -> int:
@@ -387,12 +392,17 @@ class VectorDBService:
             Number of points deleted.
         """
         if not self.client:
-            print("Vector database client not initialized, cannot delete")
             return 0
 
         try:
             from qdrant_client.http import models
 
+            # Convert user_id to integer if it's a numeric string (for consistency)
+            query_user_id = user_id
+            if isinstance(user_id, str) and user_id.isdigit():
+                query_user_id = int(user_id)
+
+            # First, check how many documents match before deletion
             filter_query = models.Filter(
                 must=[
                     models.FieldCondition(
@@ -401,11 +411,26 @@ class VectorDBService:
                     ),
                     models.FieldCondition(
                         key="metadata.user_id",
-                        match=models.MatchValue(value=user_id)
+                        match=models.MatchValue(value=query_user_id)
                     )
                 ]
             )
 
+            # Count existing documents before deletion
+            scroll_result = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=100,
+                with_payload=False,
+                with_vectors=False,
+                scroll_filter=filter_query
+            )
+
+            points_before = len(scroll_result[0])
+
+            if points_before == 0:
+                return 0
+
+            # Perform the deletion
             result = self.client.delete(
                 collection_name=self.collection_name,
                 points_selector=models.FilterSelector(
@@ -418,16 +443,31 @@ class VectorDBService:
             if hasattr(result, 'deleted'):
                 deleted_count = result.deleted
             elif hasattr(result, 'operation_id'):
-                # For async operations, assume success if no error
-                deleted_count = 1
+                # For async operations, verify by checking if points still exist
+                scroll_result_after = self.client.scroll(
+                    collection_name=self.collection_name,
+                    limit=100,
+                    with_payload=False,
+                    with_vectors=False,
+                    scroll_filter=filter_query
+                )
+                points_after = len(scroll_result_after[0])
+                deleted_count = points_before - points_after
             else:
-                # If we can't determine count, assume success if no exception
-                deleted_count = 1
+                # If we can't determine count, verify by checking if points still exist
+                scroll_result_after = self.client.scroll(
+                    collection_name=self.collection_name,
+                    limit=100,
+                    with_payload=False,
+                    with_vectors=False,
+                    scroll_filter=filter_query
+                )
+                points_after = len(scroll_result_after[0])
+                deleted_count = points_before - points_after
 
-            print(f"Deleted {deleted_count} points for source '{source}' and user '{user_id}'")
             return deleted_count
         except Exception as e:
-            print(f"Error deleting by source and user: {e}")
+            logger.error(f"Error deleting from vector DB: {e}")
             return 0
 
     def get_all_sources(self) -> List[str]:
@@ -438,7 +478,6 @@ class VectorDBService:
             List of source document names.
         """
         if not self.client:
-            print("Vector database client not initialized, cannot get sources")
             return []
 
         try:
@@ -470,5 +509,4 @@ class VectorDBService:
 
             return list(sources)
         except Exception as e:
-            print(f"Error getting all sources: {e}")
             return []

@@ -1,6 +1,7 @@
 flask
 flask-cors
 flask-jwt-extended
+flask-sqlalchemy
 openai
 sentence-transformers
 # sglang  # Temporarily commented out due to Windows long path issue
