@@ -228,7 +228,7 @@ class VectorDBService:
 
             # Store points in batches
             if points:
-                result = self.client.upsert(
+                self.client.upsert(
                     collection_name=self.collection_name,
                     points=points
                 )
@@ -397,6 +397,12 @@ class VectorDBService:
         try:
             from qdrant_client.http import models
 
+            # Convert user_id to integer if it's a numeric string (for consistency)
+            query_user_id = user_id
+            if isinstance(user_id, str) and user_id.isdigit():
+                query_user_id = int(user_id)
+
+            # First, check how many documents match before deletion
             filter_query = models.Filter(
                 must=[
                     models.FieldCondition(
@@ -405,11 +411,26 @@ class VectorDBService:
                     ),
                     models.FieldCondition(
                         key="metadata.user_id",
-                        match=models.MatchValue(value=user_id)
+                        match=models.MatchValue(value=query_user_id)
                     )
                 ]
             )
 
+            # Count existing documents before deletion
+            scroll_result = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=100,
+                with_payload=False,
+                with_vectors=False,
+                scroll_filter=filter_query
+            )
+
+            points_before = len(scroll_result[0])
+
+            if points_before == 0:
+                return 0
+
+            # Perform the deletion
             result = self.client.delete(
                 collection_name=self.collection_name,
                 points_selector=models.FilterSelector(
@@ -422,14 +443,31 @@ class VectorDBService:
             if hasattr(result, 'deleted'):
                 deleted_count = result.deleted
             elif hasattr(result, 'operation_id'):
-                # For async operations, assume success if no error
-                deleted_count = 1
+                # For async operations, verify by checking if points still exist
+                scroll_result_after = self.client.scroll(
+                    collection_name=self.collection_name,
+                    limit=100,
+                    with_payload=False,
+                    with_vectors=False,
+                    scroll_filter=filter_query
+                )
+                points_after = len(scroll_result_after[0])
+                deleted_count = points_before - points_after
             else:
-                # If we can't determine count, assume success if no exception
-                deleted_count = 1
+                # If we can't determine count, verify by checking if points still exist
+                scroll_result_after = self.client.scroll(
+                    collection_name=self.collection_name,
+                    limit=100,
+                    with_payload=False,
+                    with_vectors=False,
+                    scroll_filter=filter_query
+                )
+                points_after = len(scroll_result_after[0])
+                deleted_count = points_before - points_after
 
             return deleted_count
         except Exception as e:
+            logger.error(f"Error deleting from vector DB: {e}")
             return 0
 
     def get_all_sources(self) -> List[str]:

@@ -272,29 +272,49 @@ const DocumentList = ({ onDocumentDeleted }) => {
 
     try {
       const token = await getToken();
-      await api.delete(`/documents/delete/${selectedDocument.filename}`, {
+      const response = await api.delete(`/documents/delete/${selectedDocument.filename}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      // Remove the document from the list
-      setDocuments(documents.filter(doc => doc.filename !== selectedDocument.filename));
+      // Check if deletion was verified by the server
+      const deletionVerified = response.data?.verified || false;
 
-      toast({
-        title: 'Document deleted',
-        description: 'The document has been successfully deleted',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      if (deletionVerified) {
+        // Refresh the document list from the server to ensure consistency
+        await fetchDocuments();
 
-      // Call the callback if provided
-      if (onDocumentDeleted) {
-        onDocumentDeleted(selectedDocument);
+        toast({
+          title: 'Document deleted',
+          description: 'The document has been successfully deleted',
+          status: 'success',
+          duration: 3000,
+          isClosable: true,
+        });
+
+        // Call the callback if provided
+        if (onDocumentDeleted) {
+          onDocumentDeleted(selectedDocument);
+        }
+      } else {
+        // Server reported deletion but couldn't verify - still refresh but show warning
+        await fetchDocuments();
+
+        toast({
+          title: 'Deletion status unclear',
+          description: 'Please refresh to verify the document was deleted',
+          status: 'warning',
+          duration: 5000,
+          isClosable: true,
+        });
       }
     } catch (err) {
       console.error('Error deleting document:', err);
+
+      // Always refresh the list to show current state
+      await fetchDocuments();
+
       toast({
         title: 'Delete failed',
         description: err.response?.data?.error || 'Failed to delete the document',

@@ -4,7 +4,7 @@ This module contains the routes for document management.
 """
 import os
 import logging
-from flask import Blueprint, request, jsonify, send_from_directory, current_app
+from flask import request, jsonify, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt
 from werkzeug.utils import secure_filename
 from ...services.document_service import DocumentService
@@ -91,7 +91,6 @@ def list_documents():
     try:
         # Get user ID
         claims = get_jwt()
-        username = claims.get("sub", "anonymous")  # JWT sub contains username
         user_id = claims.get("user_id", "anonymous")  # Get actual user ID from additional claims
 
         # Get documents for the user (use user_id for filtering)
@@ -117,7 +116,6 @@ def download_document(filename):
         # Get user ID
         claims = get_jwt()
         username = claims.get("sub", "anonymous")  # JWT sub contains username
-        user_id = claims.get("user_id", "anonymous")  # Get actual user ID from additional claims
 
         # Secure the filename
         secure_name = secure_filename(filename)
@@ -182,26 +180,48 @@ def delete_document(filename):
         A JSON response with the deletion status.
     """
     try:
-        # Get user ID for authorization
+        # Get user info from JWT token - use same logic as upload and list
         claims = get_jwt()
-        user_id = claims.get("sub", "anonymous")
+        user_id = claims.get("user_id", "anonymous")  # Get actual user ID from additional claims
 
         # Secure the filename
         secure_name = secure_filename(filename)
 
-        # Delete the document
-        num_deleted = document_service.delete_document(secure_name, user_id)
+        # Check if document exists before deletion attempt
+        documents_before = document_service.get_documents_by_user(str(user_id))
+        doc_exists = any(doc['filename'] == secure_name for doc in documents_before)
 
-        if num_deleted > 0:
-            return jsonify({
-                "message": "Document deleted successfully",
-                "chunks_deleted": num_deleted
-            })
-        else:
+        if not doc_exists:
             return jsonify({
                 "error": "Document not found or you do not have permission to delete it"
             }), 404
+
+        # Delete the document using the same user_id format as used in listing
+        num_deleted = document_service.delete_document(secure_name, str(user_id))
+
+        # Verify deletion by checking if document still exists
+        documents_after = document_service.get_documents_by_user(str(user_id))
+        doc_still_exists = any(doc['filename'] == secure_name for doc in documents_after)
+
+        if num_deleted > 0 and not doc_still_exists:
+            return jsonify({
+                "message": "Document deleted successfully",
+                "chunks_deleted": num_deleted,
+                "verified": True
+            })
+        elif not doc_still_exists:
+            # Document was deleted but count might be wrong
+            return jsonify({
+                "message": "Document deleted successfully",
+                "chunks_deleted": 1,
+                "verified": True
+            })
+        else:
+            return jsonify({
+                "error": "Document deletion failed - document still exists"
+            }), 500
     except Exception as e:
+        logger.error(f"Error deleting document {filename}: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @documents_bp.route("/search", methods=["POST"])

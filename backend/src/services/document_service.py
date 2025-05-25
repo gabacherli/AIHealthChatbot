@@ -302,6 +302,7 @@ class DocumentService:
         file_existed = os.path.exists(file_path)
 
         # Delete the document from the vector database
+        num_deleted = 0
         if user_id:
             # Delete only documents owned by the user
             num_deleted = self.vector_db_service.delete_by_source_and_user(filename, user_id)
@@ -315,15 +316,17 @@ class DocumentService:
             try:
                 os.remove(file_path)
                 file_deleted = True
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to delete file from disk: {file_path}, error: {e}")
+                file_deleted = False
 
         # Return success if either vector DB deletion worked or file was deleted
         # This handles cases where Qdrant might not report deletions correctly
-        if num_deleted > 0 or file_deleted:
-            return max(num_deleted, 1)  # Return at least 1 if file was deleted
+        total_deleted = max(num_deleted, 1 if file_deleted else 0)
 
-        return 0
+        return total_deleted
 
     def get_medical_image_data(self, filename: str, user_id: str) -> Optional[bytes]:
         """

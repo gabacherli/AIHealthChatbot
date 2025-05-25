@@ -18,17 +18,13 @@ api.interceptors.request.use(
 
     // Add CORS headers
     config.headers['Accept'] = 'application/json';
-    // Only set Content-Type if not already set (important for file uploads)
-    if (!config.headers['Content-Type'] && config.method !== 'get') {
+
+    // Only set Content-Type for non-file uploads
+    // For file uploads (FormData), let the browser set Content-Type with boundary
+    const isFormData = config.data instanceof FormData;
+    if (!config.headers['Content-Type'] && config.method !== 'get' && !isFormData) {
       config.headers['Content-Type'] = 'application/json';
     }
-
-    console.log('API Request:', {
-      method: config.method?.toUpperCase(),
-      url: config.url,
-      baseURL: config.baseURL,
-      headers: config.headers
-    });
 
     return config;
   },
@@ -41,22 +37,9 @@ api.interceptors.request.use(
 // Add a response interceptor for better error handling
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', {
-      status: response.status,
-      url: response.config.url,
-      data: response.data
-    });
     return response;
   },
   (error) => {
-    console.error('API Response Error:', {
-      message: error.message,
-      code: error.code,
-      status: error.response?.status,
-      url: error.config?.url,
-      headers: error.response?.headers
-    });
-
     // Handle CORS errors specifically
     if (error.code === 'ERR_NETWORK' && !error.response) {
       console.error('CORS or network error detected');
@@ -70,7 +53,6 @@ api.interceptors.response.use(
 export const authService = {
   login: async (username, password) => {
     try {
-      console.log('Attempting login with:', { username });
       const response = await api.post('/auth/login', { username, password }, {
         headers: {
           'Content-Type': 'application/json'
@@ -242,10 +224,8 @@ export const documentService = {
   getProfessionalPatientDocuments: async (professionalId, patientId = null) => {
     try {
       const params = patientId ? { patient_id: patientId } : {};
-      console.log('Requesting professional patient documents:', { professionalId, patientId, params });
 
       const response = await api.get(`/documents/professionals/${professionalId}/patient-documents`, { params });
-      console.log('Professional patient documents response:', response.data);
       return response.data;
     } catch (error) {
       console.error('Get professional patient documents error:', error);
