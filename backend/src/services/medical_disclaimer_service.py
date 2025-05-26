@@ -6,7 +6,7 @@ when documents have conflicting AI confidence indicators. This approach reduces 
 consumption in the system prompt while maintaining the same medical disclaimer functionality.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any
 import logging
 
 try:
@@ -157,35 +157,4 @@ def append_medical_disclaimer(ai_response: str, context_data: Dict[str, Any], us
         return ai_response  # Return original response on error
 
 
-def prepend_medical_disclaimer(ai_response: str, context_data: Dict[str, Any], user_role: str = "patient", language: str = "pt") -> str:
-    """
-    Prepend medical disclaimer to AI chatbot response if conflicting confidence indicators are detected.
 
-    Args:
-        ai_response: The original AI chatbot response from OpenAI
-        context_data: Structured medical context data containing medical images
-        user_role: The role of the user (patient or professional)
-        language: Language code ('pt' for Portuguese, 'en' for English)
-
-    Returns:
-        AI response with disclaimer prepended if applicable, otherwise original response
-    """
-    try:
-        # Validate AI response
-        if not ai_response or not isinstance(ai_response, str):
-            logger.warning("Invalid AI response provided for disclaimer processing")
-            return ai_response or ""
-
-        disclaimer = generate_medical_disclaimer(context_data, user_role, language)
-
-        if disclaimer:
-            # Prepend disclaimer to the beginning of the response with proper spacing
-            enhanced_response = f"{disclaimer}\n\n{ai_response}"
-            logger.debug(f"Prepended medical disclaimer to AI response (length: {len(disclaimer)} chars)")
-            return enhanced_response
-
-        return ai_response
-
-    except Exception as e:
-        logger.error(f"Error prepending medical disclaimer to AI response: {e}")
-        return ai_response  # Return original response on error
