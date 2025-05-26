@@ -18,6 +18,7 @@ pandas
 werkzeug
 tqdm
 PyMuPDF==1.22.5
+langchain
 
 # Medical imaging libraries
 pydicom

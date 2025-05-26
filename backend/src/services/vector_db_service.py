@@ -313,6 +313,8 @@ class VectorDBService:
                 filter=filter_query
             )
 
+
+
             # Format the results
             results = []
             for scored_point in search_result:
@@ -510,3 +512,52 @@ class VectorDBService:
             return list(sources)
         except Exception as e:
             return []
+
+    def get_collection_stats(self) -> Dict[str, Any]:
+        """
+        Get detailed statistics about the vector database collection.
+
+        Returns:
+            Dictionary with collection statistics and sample documents.
+        """
+        if not self.client:
+            return {"error": "No client connection"}
+
+        try:
+            # Get collection info
+            collection_info = self.client.get_collection(self.collection_name)
+
+            # Get all points using scroll
+            scroll_result = self.client.scroll(
+                collection_name=self.collection_name,
+                limit=10,  # Get first 10 documents
+                with_payload=True,
+                with_vectors=False
+            )
+
+            points = scroll_result[0]
+
+            # Format sample documents
+            sample_docs = []
+            for point in points:
+                metadata = point.payload.get("metadata", {})
+                sample_docs.append({
+                    "id": point.id,
+                    "user_id": metadata.get("user_id"),
+                    "source": metadata.get("source"),
+                    "content_type": metadata.get("content_type"),
+                    "medical_keywords_count": len(metadata.get("medical_keywords", [])),
+                    "has_image_data": metadata.get("has_image_data", False)
+                })
+
+            return {
+                "collection_name": self.collection_name,
+                "total_points": collection_info.points_count,
+                "vector_size": collection_info.config.params.vectors.size,
+                "distance_metric": collection_info.config.params.vectors.distance,
+                "sample_documents": sample_docs,
+                "sample_count": len(sample_docs)
+            }
+
+        except Exception as e:
+            return {"error": f"Failed to get collection stats: {str(e)}"}

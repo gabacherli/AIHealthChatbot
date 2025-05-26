@@ -4,25 +4,56 @@ This module contains functions for document processing and management.
 """
 import os
 import uuid
+import logging
 from typing import List, Dict, Any, Optional
 from ..utils.document_processor import DocumentProcessor
 from .medical_embedding_service import MedicalEmbeddingService
 from .vector_db_service import VectorDBService
 from ..config import get_config
 
+logger = logging.getLogger(__name__)
 config = get_config()
 
 class DocumentService:
     """Service for document processing and management."""
 
+    _instance = None
+    _initialized = False
+    _lock = None
+
+    def __new__(cls):
+        """Implement singleton pattern to prevent multiple DocumentService instances."""
+        if cls._instance is None:
+            import threading
+            if cls._lock is None:
+                cls._lock = threading.Lock()
+
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(DocumentService, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
         """Initialize the document service."""
-        self.document_processor = DocumentProcessor(
-            chunk_size=config.CHUNK_SIZE,
-            chunk_overlap=config.CHUNK_OVERLAP
-        )
-        self.embedding_service = MedicalEmbeddingService()
-        self.vector_db_service = VectorDBService()
+        # Only initialize once per process
+        if DocumentService._initialized:
+            return
+
+        logger.info("Initializing DocumentService singleton...")
+
+        try:
+            self.document_processor = DocumentProcessor(
+                chunk_size=config.CHUNK_SIZE,
+                chunk_overlap=config.CHUNK_OVERLAP
+            )
+            self.embedding_service = MedicalEmbeddingService()
+            self.vector_db_service = VectorDBService()
+
+            DocumentService._initialized = True
+            logger.info("DocumentService singleton initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize DocumentService: {e}")
+            raise
 
     def process_and_store_document(
         self,
@@ -435,7 +466,81 @@ class DocumentService:
             filters=filters
         )
 
+        # FALLBACK: If vector search returns no results, try a direct scroll-based search
+        if len(results) == 0 and filters:
+            results = self._fallback_scroll_search(filters, limit=5)
+
         return results
+
+    def _fallback_scroll_search(self, filters: Dict[str, Any], limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Fallback search using scroll when vector search fails.
+
+        Args:
+            filters: Filters to apply
+            limit: Maximum number of results
+
+        Returns:
+            List of matching documents
+        """
+        try:
+            from qdrant_client.http import models
+
+            # Build filter conditions
+            filter_conditions = []
+
+            if "user_id" in filters and filters["user_id"]:
+                filter_conditions.append(
+                    models.FieldCondition(
+                        key="metadata.user_id",
+                        match=models.MatchValue(value=filters["user_id"])
+                    )
+                )
+
+            if "source" in filters and filters["source"]:
+                filter_conditions.append(
+                    models.FieldCondition(
+                        key="metadata.source",
+                        match=models.MatchValue(value=filters["source"])
+                    )
+                )
+
+            filter_query = None
+            if filter_conditions:
+                filter_query = models.Filter(must=filter_conditions)
+
+            # Use scroll to get matching documents
+            scroll_result = self.vector_db_service.client.scroll(
+                collection_name=self.vector_db_service.collection_name,
+                limit=limit,
+                with_payload=True,
+                with_vectors=False,
+                scroll_filter=filter_query
+            )
+
+            points = scroll_result[0]
+
+            # Format results to match vector search format
+            results = []
+            for point in points:
+                # Prepare metadata, excluding large binary data
+                metadata = {
+                    k: v for k, v in point.payload["metadata"].items()
+                    if k not in ["image_data", "image_data_base64"]
+                }
+
+                results.append({
+                    "id": point.id,
+                    "content": point.payload.get("content", ""),
+                    "metadata": metadata,
+                    "score": 1.0  # Default score for scroll-based results
+                })
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Fallback search error: {e}")
+            return []
 
     def retrieve_context_for_query(
         self,
@@ -474,3 +579,7 @@ class DocumentService:
             context_parts.append(f"[Document {i+1}: {source}{page_info}]\n{result['content']}\n")
 
         return "\n".join(context_parts)
+
+
+# Create a singleton instance for easy import
+document_service = DocumentService()

@@ -5,13 +5,12 @@ This module contains the REST API endpoints for managing patient-professional re
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from ...services.relationship_service import RelationshipService
-from ...services.audit_service import AuditService
+from ...services.audit_service import audit_service
 from ...models.database import User
 from . import relationships_bp
 
 # Initialize services
 relationship_service = RelationshipService()
-audit_service = AuditService()
 
 
 @relationships_bp.route("/test", methods=["GET"])

@@ -7,7 +7,7 @@ import logging
 from flask import request, jsonify, send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt
 from werkzeug.utils import secure_filename
-from ...services.document_service import DocumentService
+from ...services.document_service import document_service
 from ...config import get_config
 
 from . import documents_bp
@@ -16,7 +16,6 @@ from . import documents_bp
 logger = logging.getLogger(__name__)
 
 config = get_config()
-document_service = DocumentService()
 
 def allowed_file(filename):
     """Check if the file extension is allowed."""

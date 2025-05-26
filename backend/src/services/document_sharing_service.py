@@ -4,8 +4,8 @@ This module handles document sharing permissions and access control between pati
 """
 from typing import List, Dict, Optional, Set
 from ..services.relationship_service import RelationshipService
-from ..services.audit_service import AuditService
-from ..services.document_service import DocumentService
+from ..services.audit_service import audit_service
+from ..services.document_service import document_service
 from ..models.database import User
 
 
@@ -15,8 +15,8 @@ class DocumentSharingService:
     def __init__(self):
         """Initialize the document sharing service."""
         self.relationship_service = RelationshipService()
-        self.audit_service = AuditService()
-        self.document_service = DocumentService()
+        self.audit_service = audit_service
+        self.document_service = document_service
 
     def get_shared_documents_for_professional(
         self,
