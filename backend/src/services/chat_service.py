@@ -5,6 +5,7 @@ This module contains the chat service functions.
 from .prompt_builder import build_prompt
 from .document_service import document_service
 from .relationship_service import RelationshipService
+from .medical_disclaimer_service import append_medical_disclaimer
 from openai import OpenAI
 from ..config import get_config
 import logging
@@ -19,7 +20,7 @@ client = OpenAI(
 
 relationship_service = RelationshipService()
 
-def get_answer_with_context(question: str, role: str, user_id: str = None, patient_id: str = None) -> tuple:
+def get_answer_with_context(question: str, role: str, user_id: str = None, patient_id: str = None, language: str = "pt") -> tuple:
     """
     Get an answer to a question with context from relevant medical documents.
 
@@ -28,6 +29,7 @@ def get_answer_with_context(question: str, role: str, user_id: str = None, patie
         role: The role of the user (patient or professional).
         user_id: The ID of the user asking the question.
         patient_id: The ID of the patient (for professionals accessing patient data).
+        language: Language code ('pt' for Portuguese, 'en' for English). Defaults to 'pt'.
 
     Returns:
         A tuple containing the answer and a list of sources.
@@ -71,7 +73,8 @@ def get_answer_with_context(question: str, role: str, user_id: str = None, patie
             question=question,
             context_data=context_data,
             user_role=role,
-            is_professional_query=(role == "professional" and patient_id is not None)
+            is_professional_query=(role == "professional" and patient_id is not None),
+            language=language
         )
 
         # Generate response
@@ -83,6 +86,9 @@ def get_answer_with_context(question: str, role: str, user_id: str = None, patie
 
         answer = response.choices[0].message.content
 
+        # Apply medical disclaimer post-processing if needed
+        answer = append_medical_disclaimer(answer, context_data, role, language)
+
         # Format sources with enhanced metadata
         sources = _format_sources_with_metadata(search_results)
 
@@ -92,7 +98,7 @@ def get_answer_with_context(question: str, role: str, user_id: str = None, patie
     except Exception as e:
         logger.error(f"Error in get_answer_with_context: {str(e)}")
         # Fallback to basic response without context
-        prompt_messages = build_prompt(question, {}, role)
+        prompt_messages = build_prompt(question, {}, role, language=language)
 
         response = client.chat.completions.create(
             model=config.MODEL_NAME,
@@ -100,7 +106,12 @@ def get_answer_with_context(question: str, role: str, user_id: str = None, patie
             temperature=0.5
         )
 
-        return response.choices[0].message.content, []
+        fallback_answer = response.choices[0].message.content
+
+        # Apply medical disclaimer post-processing even for fallback (with empty context)
+        fallback_answer = append_medical_disclaimer(fallback_answer, {}, role, language)
+
+        return fallback_answer, []
 
 
 def _retrieve_enhanced_context(question: str, user_id: str, role: str, is_professional_query: bool = False) -> list:

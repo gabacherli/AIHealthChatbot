@@ -70,7 +70,8 @@ def chat():
             question=question,
             role=role,
             user_id=user_id,
-            patient_id=str(patient_id) if patient_id else None
+            patient_id=str(patient_id) if patient_id else None,
+            language="pt"  # Default to Portuguese as per user preferences
         )
 
         # Check if result is a tuple (answer, sources)

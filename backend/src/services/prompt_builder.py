@@ -4,10 +4,12 @@ This module contains functions for building prompts for the OpenAI API.
 """
 from typing import Dict, List, Any
 import logging
+from ..utils.medical_context_utils import extract_medical_context, get_pathological_findings
+from .template_loader import template_loader
 
 logger = logging.getLogger(__name__)
 
-def build_prompt(question: str, context_data: Dict[str, Any], user_role: str, is_professional_query: bool = False):
+def build_prompt(question: str, context_data: Dict[str, Any], user_role: str, is_professional_query: bool = False, language: str = "pt"):
     """
     Build an enhanced prompt for the OpenAI API with medical context.
 
@@ -17,32 +19,54 @@ def build_prompt(question: str, context_data: Dict[str, Any], user_role: str, is
                      medical images, and pathological findings.
         user_role: The role of the user (patient or professional).
         is_professional_query: Whether this is a professional querying patient data.
+        language: Language code ('pt' for Portuguese, 'en' for English). Defaults to 'pt'.
 
     Returns:
         A list of messages for the OpenAI API.
     """
     # Handle empty context
     if not context_data or not context_data.get("documents"):
-        return _build_prompt_without_context(question, user_role, is_professional_query)
+        return _build_prompt_without_context(question, user_role, is_professional_query, language)
 
     # Build enhanced prompt with medical context
-    return _build_enhanced_prompt(question, context_data, user_role, is_professional_query)
+    return _build_enhanced_prompt(question, context_data, user_role, is_professional_query, language)
 
 
-def _build_prompt_without_context(question: str, user_role: str, is_professional_query: bool):
+def _build_prompt_without_context(question: str, user_role: str, is_professional_query: bool, language: str = "pt"):
     """Build prompt when no context documents are available."""
-    if user_role == "patient":
-        role_instruction = (
-            "You are a helpful medical assistant. Provide general health information "
-            "in easy-to-understand terms suitable for a patient. Always recommend "
-            "consulting with healthcare professionals for specific medical concerns."
-        )
-    else:
-        role_instruction = (
-            "You are a helpful medical assistant for healthcare professionals. "
-            "Provide detailed clinical insights and evidence-based information. "
-            f"{'Note: No patient-specific documents were available for this query.' if is_professional_query else ''}"
-        )
+    try:
+        role_instruction = template_loader.get_no_context_prompt(user_role, is_professional_query, language=language)
+    except (FileNotFoundError, IOError) as e:
+        logger.warning(f"Failed to load template, using fallback: {e}")
+        # Fallback to hardcoded prompts if template loading fails
+        if user_role == "patient":
+            if language == "pt":
+                role_instruction = (
+                    "Você é um assistente médico útil. Forneça informações gerais de saúde "
+                    "em termos fáceis de entender adequados para um paciente. Sempre recomende "
+                    "consultar profissionais de saúde para questões médicas específicas."
+                )
+            else:
+                role_instruction = (
+                    "You are a helpful medical assistant. Provide general health information "
+                    "in easy-to-understand terms suitable for a patient. Always recommend "
+                    "consulting with healthcare professionals for specific medical concerns."
+                )
+        else:
+            if language == "pt":
+                note = "Nota: Nenhum documento específico do paciente estava disponível para esta consulta." if is_professional_query else ""
+                role_instruction = (
+                    "Você é um assistente médico útil para profissionais de saúde. "
+                    "Forneça insights clínicos detalhados e informações baseadas em evidências. "
+                    f"{note}"
+                )
+            else:
+                note = "Note: No patient-specific documents were available for this query." if is_professional_query else ""
+                role_instruction = (
+                    "You are a helpful medical assistant for healthcare professionals. "
+                    "Provide detailed clinical insights and evidence-based information. "
+                    f"{note}"
+                )
 
     return [
         {"role": "system", "content": role_instruction},
@@ -50,24 +74,53 @@ def _build_prompt_without_context(question: str, user_role: str, is_professional
     ]
 
 
-def _build_enhanced_prompt(question: str, context_data: Dict[str, Any], user_role: str, is_professional_query: bool):
+def _build_enhanced_prompt(question: str, context_data: Dict[str, Any], user_role: str, is_professional_query: bool, language: str = "pt"):
     """Build enhanced prompt with medical context and metadata."""
 
     # Base role instructions
-    if user_role == "patient":
-        base_instruction = (
-            "You are a medical assistant with access to your stored medical records and AI analysis results. "
-            "Provide personalized guidance in clear terms based on your documented medical information. "
-            "I reference previous AI analysis—I cannot perform new image analysis. "
-            "Always recommend consulting healthcare professionals for medical concerns."
-        )
-    else:
-        context_type = "patient" if is_professional_query else "your"
-        base_instruction = (
-            f"You are a medical assistant for healthcare professionals with access to {context_type} medical records. "
-            f"Provide clinical insights based on stored analysis results and documented findings. "
-            f"Include relevant medical findings for clinical decision-making."
-        )
+    try:
+        if user_role == "patient":
+            base_instruction = template_loader.get_patient_prompt(language=language)
+        else:
+            # Determine context type based on language
+            if language == "pt":
+                context_type = "do paciente" if is_professional_query else "seus"
+            else:
+                context_type = "patient" if is_professional_query else "your"
+            base_instruction = template_loader.get_professional_prompt(context_type=context_type, language=language)
+    except (FileNotFoundError, IOError) as e:
+        logger.warning(f"Failed to load template, using fallback: {e}")
+        # Fallback to hardcoded prompts if template loading fails
+        if user_role == "patient":
+            if language == "pt":
+                base_instruction = (
+                    "Você é um assistente médico com acesso aos seus registros médicos armazenados e resultados de análise de IA. "
+                    "Forneça orientações personalizadas em termos claros com base em suas informações médicas documentadas. "
+                    "Eu referencio análises de IA anteriores—não posso realizar novas análises de imagem. "
+                    "Sempre recomende consultar profissionais de saúde para questões médicas."
+                )
+            else:
+                base_instruction = (
+                    "You are a medical assistant with access to your stored medical records and AI analysis results. "
+                    "Provide personalized guidance in clear terms based on your documented medical information. "
+                    "I reference previous AI analysis—I cannot perform new image analysis. "
+                    "Always recommend consulting healthcare professionals for medical concerns."
+                )
+        else:
+            if language == "pt":
+                context_type = "do paciente" if is_professional_query else "seus"
+                base_instruction = (
+                    f"Você é um assistente médico para profissionais de saúde com acesso aos registros médicos {context_type}. "
+                    f"Forneça insights clínicos baseados em resultados de análises armazenadas e achados documentados. "
+                    f"Inclua achados médicos relevantes para tomada de decisão clínica."
+                )
+            else:
+                context_type = "patient" if is_professional_query else "your"
+                base_instruction = (
+                    f"You are a medical assistant for healthcare professionals with access to {context_type} medical records. "
+                    f"Provide clinical insights based on stored analysis results and documented findings. "
+                    f"Include relevant medical findings for clinical decision-making."
+                )
 
     # Generate medical overview and structured context
     if any(context_data.get(key) for key in ["documents", "medical_keywords", "medical_images", "pathological_findings"]):
@@ -215,7 +268,6 @@ def _format_grouped_medical_images(images: List[Dict[str, Any]]) -> str:
 
     return "\n\n".join(sections)
 
-
 def _format_compact_image_details(img: Dict[str, Any]) -> str:
     """Format individual image details in a compact format."""
     source = img.get('source', 'Unknown')
@@ -232,14 +284,9 @@ def _format_compact_image_details(img: Dict[str, Any]) -> str:
         if width and height:
             details.append(f"{width}x{height}")
 
-    # Medical context analysis
-    medical_context = metadata.get('medical_context')
-    if medical_context is True:
-        image_info_alt = metadata.get('image_info', {})
-        if isinstance(image_info_alt, dict):
-            medical_context = image_info_alt.get('medical_context', {})
-
-    if medical_context and isinstance(medical_context, dict):
+    # Medical context analysis using shared utilities
+    medical_context = extract_medical_context(metadata)
+    if medical_context:
         # Relevance score
         relevance = medical_context.get('medical_relevance_score', 0)
         if relevance:
@@ -249,7 +296,7 @@ def _format_compact_image_details(img: Dict[str, Any]) -> str:
         pathological_analysis = medical_context.get('pathological_analysis', {})
         if pathological_analysis and isinstance(pathological_analysis, dict):
             clinical_significance = pathological_analysis.get('clinical_significance', '')
-            specific_findings = pathological_analysis.get('specific_findings', [])
+            specific_findings, _ = get_pathological_findings(medical_context)
 
             if clinical_significance:
                 details.append(f"Assessment: {clinical_significance}")
@@ -300,20 +347,12 @@ def _find_finding_sources(finding: str, images: List[Dict[str, Any]]) -> List[st
     sources = []
 
     for img in images:
-        metadata = img.get('metadata', {})
-        medical_context = metadata.get('medical_context')
+        try:
+            metadata = img.get('metadata', {})
+            medical_context = extract_medical_context(metadata)
 
-        # Handle boolean medical_context
-        if medical_context is True:
-            image_info = metadata.get('image_info', {})
-            if isinstance(image_info, dict):
-                medical_context = image_info.get('medical_context', {})
-
-        if medical_context and isinstance(medical_context, dict):
-            pathological_analysis = medical_context.get('pathological_analysis', {})
-            if pathological_analysis and isinstance(pathological_analysis, dict):
-                specific_findings = pathological_analysis.get('specific_findings', [])
-                normal_indicators = pathological_analysis.get('normal_indicators', [])
+            if medical_context:
+                specific_findings, normal_indicators = get_pathological_findings(medical_context)
 
                 # Check if finding exists in this image
                 clean_finding = finding.replace("normal_", "")
@@ -323,5 +362,8 @@ def _find_finding_sources(finding: str, images: List[Dict[str, Any]]) -> List[st
                     source = img.get('source', 'Unknown')
                     if source not in sources:
                         sources.append(source)
+        except Exception as e:
+            logger.warning(f"Error checking findings for image {img.get('source', 'Unknown')}: {e}")
+            continue
 
     return sources
