@@ -2,14 +2,19 @@
 Audit Service for HIPAA compliance and security tracking.
 This module handles audit logging for all sensitive operations in the system.
 """
-from typing import Dict, List, Optional, Any
-from datetime import datetime, timedelta
+from typing import Dict, Optional, Any
+from datetime import datetime
 from flask import request
-from ..models.database import db, AuditLog, User
+import json
+from ..database.repositories.audit_repository import AuditRepository
 
 
 class AuditService:
     """Service for managing audit logs and compliance tracking."""
+
+    def __init__(self):
+        """Initialize the audit service."""
+        self.audit_repo = AuditRepository()
 
     def log_action(
         self,
@@ -20,7 +25,7 @@ class AuditService:
         details: Optional[Dict[str, Any]] = None,
         ip_address: Optional[str] = None,
         user_agent: Optional[str] = None
-    ) -> AuditLog:
+    ) -> Optional[int]:
         """
         Log an action for audit purposes.
 
@@ -34,7 +39,7 @@ class AuditService:
             user_agent: User agent string
 
         Returns:
-            The created audit log entry
+            The created audit log ID if successful, None otherwise
         """
         try:
             # Get request context if available
@@ -44,25 +49,22 @@ class AuditService:
             if not user_agent and request:
                 user_agent = request.headers.get('User-Agent', '')[:500]  # Limit length
 
-            # Create audit log entry
-            audit_log = AuditLog(
-                action=action,
-                resource_type=resource_type,
-                user_id=user_id,
-                resource_id=resource_id,
-                details=details,
-                ip_address=ip_address,
-                user_agent=user_agent
-            )
+            # Prepare audit log data
+            audit_data = {
+                'action': action,
+                'resource_type': resource_type,
+                'user_id': user_id,
+                'resource_id': resource_id,
+                'details': json.dumps(details) if details else None,
+                'ip_address': ip_address,
+                'user_agent': user_agent,
+                'timestamp': datetime.now()
+            }
 
-            db.session.add(audit_log)
-            db.session.commit()
-
-            return audit_log
+            return self.audit_repo.create(audit_data)
 
         except Exception as e:
             # Don't let audit logging failures break the main operation
-            db.session.rollback()
             return None
 
     def log_document_access(
@@ -72,7 +74,7 @@ class AuditService:
         document_name: str,
         access_type: str = 'view',
         patient_id: Optional[int] = None
-    ) -> AuditLog:
+    ) -> Optional[int]:
         """
         Log document access for HIPAA compliance.
 
@@ -105,7 +107,7 @@ class AuditService:
         action: str,
         patient_id: Optional[int] = None,
         professional_id: Optional[int] = None
-    ) -> AuditLog:
+    ) -> Optional[int]:
         """
         Log relationship-related actions.
 
@@ -137,7 +139,7 @@ class AuditService:
         action: str,
         target_user_id: Optional[int] = None,
         details: Optional[Dict] = None
-    ) -> AuditLog:
+    ) -> Optional[int]:
         """
         Log user-related actions.
 
@@ -157,187 +159,6 @@ class AuditService:
             resource_id=str(target_user_id) if target_user_id else str(user_id),
             details=details
         )
-
-    def get_user_audit_logs(
-        self,
-        user_id: int,
-        days: int = 30,
-        action_filter: Optional[str] = None,
-        resource_type_filter: Optional[str] = None
-    ) -> List[Dict]:
-        """
-        Get audit logs for a specific user.
-
-        Args:
-            user_id: ID of the user
-            days: Number of days to look back
-            action_filter: Optional action filter
-            resource_type_filter: Optional resource type filter
-
-        Returns:
-            List of audit log dictionaries
-        """
-        start_date = datetime.utcnow() - timedelta(days=days)
-
-        query = AuditLog.query.filter(
-            AuditLog.user_id == user_id,
-            AuditLog.timestamp >= start_date
-        )
-
-        if action_filter:
-            query = query.filter(AuditLog.action.ilike(f'%{action_filter}%'))
-
-        if resource_type_filter:
-            query = query.filter(AuditLog.resource_type == resource_type_filter)
-
-        logs = query.order_by(AuditLog.timestamp.desc()).limit(1000).all()
-        return [log.to_dict() for log in logs]
-
-    def get_document_audit_logs(
-        self,
-        document_id: str,
-        days: int = 30
-    ) -> List[Dict]:
-        """
-        Get audit logs for a specific document.
-
-        Args:
-            document_id: ID of the document
-            days: Number of days to look back
-
-        Returns:
-            List of audit log dictionaries
-        """
-        start_date = datetime.utcnow() - timedelta(days=days)
-
-        logs = AuditLog.query.filter(
-            AuditLog.resource_type == 'document',
-            AuditLog.resource_id == document_id,
-            AuditLog.timestamp >= start_date
-        ).order_by(AuditLog.timestamp.desc()).all()
-
-        return [log.to_dict() for log in logs]
-
-    def get_patient_access_logs(
-        self,
-        patient_id: int,
-        days: int = 30
-    ) -> List[Dict]:
-        """
-        Get all access logs for a patient's data.
-
-        Args:
-            patient_id: ID of the patient
-            days: Number of days to look back
-
-        Returns:
-            List of audit log dictionaries
-        """
-        start_date = datetime.utcnow() - timedelta(days=days)
-
-        # Get logs where patient_id is in details or user_id is the patient
-        logs = AuditLog.query.filter(
-            AuditLog.timestamp >= start_date
-        ).filter(
-            db.or_(
-                AuditLog.user_id == patient_id,
-                AuditLog.details.contains(f'"patient_id": {patient_id}')
-            )
-        ).order_by(AuditLog.timestamp.desc()).limit(1000).all()
-
-        return [log.to_dict() for log in logs]
-
-    def get_professional_access_logs(
-        self,
-        professional_id: int,
-        days: int = 30
-    ) -> List[Dict]:
-        """
-        Get all access logs for a professional's actions.
-
-        Args:
-            professional_id: ID of the professional
-            days: Number of days to look back
-
-        Returns:
-            List of audit log dictionaries
-        """
-        start_date = datetime.utcnow() - timedelta(days=days)
-
-        logs = AuditLog.query.filter(
-            AuditLog.user_id == professional_id,
-            AuditLog.timestamp >= start_date
-        ).order_by(AuditLog.timestamp.desc()).limit(1000).all()
-
-        return [log.to_dict() for log in logs]
-
-    def get_system_audit_summary(self, days: int = 7) -> Dict:
-        """
-        Get a summary of system audit activity.
-
-        Args:
-            days: Number of days to look back
-
-        Returns:
-            Dictionary with audit summary statistics
-        """
-        start_date = datetime.utcnow() - timedelta(days=days)
-
-        # Get total counts by action type
-        action_counts = db.session.query(
-            AuditLog.action,
-            db.func.count(AuditLog.id).label('count')
-        ).filter(
-            AuditLog.timestamp >= start_date
-        ).group_by(AuditLog.action).all()
-
-        # Get total counts by resource type
-        resource_counts = db.session.query(
-            AuditLog.resource_type,
-            db.func.count(AuditLog.id).label('count')
-        ).filter(
-            AuditLog.timestamp >= start_date
-        ).group_by(AuditLog.resource_type).all()
-
-        # Get unique users
-        unique_users = db.session.query(
-            db.func.count(db.distinct(AuditLog.user_id))
-        ).filter(
-            AuditLog.timestamp >= start_date
-        ).scalar()
-
-        # Get total log count
-        total_logs = AuditLog.query.filter(
-            AuditLog.timestamp >= start_date
-        ).count()
-
-        return {
-            'period_days': days,
-            'start_date': start_date.isoformat(),
-            'total_logs': total_logs,
-            'unique_users': unique_users,
-            'action_counts': {action: count for action, count in action_counts},
-            'resource_counts': {resource: count for resource, count in resource_counts}
-        }
-
-    def cleanup_old_logs(self, days_to_keep: int = 365) -> int:
-        """
-        Clean up old audit logs (for storage management).
-
-        Args:
-            days_to_keep: Number of days of logs to keep
-
-        Returns:
-            Number of logs deleted
-        """
-        cutoff_date = datetime.utcnow() - timedelta(days=days_to_keep)
-
-        deleted_count = AuditLog.query.filter(
-            AuditLog.timestamp < cutoff_date
-        ).delete()
-
-        db.session.commit()
-        return deleted_count
 
 
 # Create a singleton instance for easy import

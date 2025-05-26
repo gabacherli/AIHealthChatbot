@@ -6,13 +6,14 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt
 from ...services.document_sharing_service import DocumentSharingService
 from ...services.audit_service import audit_service
-from ...models.database import User
+from ...database.repositories.user_repository import UserRepository
 
 # Create blueprint
 sharing_bp = Blueprint("document_sharing", __name__)
 
 # Initialize services
 document_sharing_service = DocumentSharingService()
+user_repo = UserRepository()
 
 
 def get_current_user():
@@ -20,7 +21,7 @@ def get_current_user():
     claims = get_jwt()
     username = claims.get("sub")  # JWT contains username, not user_id
     if username:
-        return User.query.filter_by(username=username).first()
+        return user_repo.get_by_username(username)
     return None
 
 
@@ -37,15 +38,15 @@ def get_patient_shared_documents(patient_id):
             return jsonify({"error": "User not found"}), 401
 
         # Check access permissions
-        if current_user.role == 'patient':
+        if current_user.get('role') == 'patient':
             # Patients can only access their own documents
-            if current_user.id != patient_id:
+            if current_user.get('id') != patient_id:
                 return jsonify({"error": "Access denied"}), 403
-        elif current_user.role == 'professional':
+        elif current_user.get('role') == 'professional':
             # Professionals can only access documents of their assigned patients
             has_access = document_sharing_service.relationship_service.check_access_permission(
                 patient_id=patient_id,
-                professional_id=current_user.id,
+                professional_id=current_user.get('id'),
                 permission_type='can_view_documents'
             )
             if not has_access:
@@ -60,7 +61,7 @@ def get_patient_shared_documents(patient_id):
         audit_service.log_action(
             action='patient_documents_accessed',
             resource_type='document',
-            user_id=current_user.id,
+            user_id=current_user.get('id'),
             details={
                 'patient_id': patient_id,
                 'document_count': len(documents),
@@ -103,7 +104,7 @@ def get_professional_patient_documents(professional_id):
             return jsonify({"error": "User not found"}), 401
 
         # Only allow the professional themselves to access this endpoint
-        if current_user.role != 'professional' or current_user.id != professional_id:
+        if current_user.get('role') != 'professional' or current_user.get('id') != professional_id:
             return jsonify({"error": "Access denied"}), 403
 
         # Get optional patient filter
@@ -152,14 +153,14 @@ def check_document_access(document_id):
 
         # Check access permissions
         permissions = document_sharing_service.check_document_access(
-            user_id=current_user.id,
+            user_id=current_user.get('id'),
             document_id=document_id,
-            user_role=current_user.role
+            user_role=current_user.get('role')
         )
 
         return jsonify({
             "document_id": document_id,
-            "user_id": current_user.id,
+            "user_id": current_user.get('id'),
             "permissions": permissions,
             "has_access": permissions.get('can_view', False)
         }), 200
@@ -182,9 +183,9 @@ def get_document_audit_logs(document_id):
 
         # Check if user has access to view audit logs for this document
         permissions = document_sharing_service.check_document_access(
-            user_id=current_user.id,
+            user_id=current_user.get('id'),
             document_id=document_id,
-            user_role=current_user.role
+            user_role=current_user.get('role')
         )
 
         if not permissions.get('can_view', False):
@@ -202,7 +203,7 @@ def get_document_audit_logs(document_id):
         audit_service.log_action(
             action='audit_logs_accessed',
             resource_type='document',
-            user_id=current_user.id,
+            user_id=current_user.get('id'),
             resource_id=document_id,
             details={'days_requested': days, 'logs_count': len(logs)}
         )
@@ -231,15 +232,15 @@ def get_patient_access_summary(patient_id):
             return jsonify({"error": "User not found"}), 401
 
         # Check access permissions
-        if current_user.role == 'patient':
+        if current_user.get('role') == 'patient':
             # Patients can only access their own summary
-            if current_user.id != patient_id:
+            if current_user.get('id') != patient_id:
                 return jsonify({"error": "Access denied"}), 403
-        elif current_user.role == 'professional':
+        elif current_user.get('role') == 'professional':
             # Professionals can only access summaries of their assigned patients
             has_access = document_sharing_service.relationship_service.check_access_permission(
                 patient_id=patient_id,
-                professional_id=current_user.id,
+                professional_id=current_user.get('id'),
                 permission_type='can_view_documents'
             )
             if not has_access:
@@ -259,9 +260,9 @@ def get_patient_access_summary(patient_id):
         audit_service.log_action(
             action='access_summary_viewed',
             resource_type='user',
-            user_id=current_user.id,
+            user_id=current_user.get('id'),
             resource_id=str(patient_id),
-            details={'days_requested': days, 'viewer_role': current_user.role}
+            details={'days_requested': days, 'viewer_role': current_user.get('role')}
         )
 
         return jsonify(summary), 200
@@ -301,9 +302,9 @@ def log_document_access():
 
         # Verify user has access to this document
         permissions = document_sharing_service.check_document_access(
-            user_id=current_user.id,
+            user_id=current_user.get('id'),
             document_id=document_id,
-            user_role=current_user.role
+            user_role=current_user.get('role')
         )
 
         if not permissions.get('can_view', False):
@@ -311,7 +312,7 @@ def log_document_access():
 
         # Log the access
         document_sharing_service.log_document_access(
-            user_id=current_user.id,
+            user_id=current_user.get('id'),
             document_id=document_id,
             access_type=access_type,
             success=success

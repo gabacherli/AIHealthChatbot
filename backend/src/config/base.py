@@ -51,9 +51,11 @@ class BaseConfig:
         'dcm', 'dicom', 'ima', 'img'  # DICOM medical image formats
     }
 
-    # Database settings
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///health_chatbot.db")
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # Database settings (SQLAlchemy Core with MySQL)
+    DATABASE_URL = os.getenv("DATABASE_URL", "mysql+pymysql://health_user:dev-user-password@localhost:3306/health_chatbot")
+    DATABASE_POOL_SIZE = int(os.getenv("SQLALCHEMY_CORE_POOL_SIZE", "10"))
+    DATABASE_MAX_OVERFLOW = int(os.getenv("SQLALCHEMY_CORE_MAX_OVERFLOW", "20"))
+    DATABASE_ECHO = os.getenv("SQLALCHEMY_CORE_ECHO", "false").lower() == "true"
 
     # Application settings
     CHUNK_DATA_PATH = "data/"
