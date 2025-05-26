@@ -6,7 +6,7 @@ from typing import List, Dict, Optional, Set
 from ..services.relationship_service import RelationshipService
 from ..services.audit_service import audit_service
 from ..services.document_service import document_service
-from ..models.database import User
+from ..database.repositories.user_repository import UserRepository
 
 
 class DocumentSharingService:
@@ -17,6 +17,7 @@ class DocumentSharingService:
         self.relationship_service = RelationshipService()
         self.audit_service = audit_service
         self.document_service = document_service
+        self.user_repo = UserRepository()
 
     def get_shared_documents_for_professional(
         self,
@@ -56,7 +57,7 @@ class DocumentSharingService:
 
             for pid in patient_ids:
                 # Get patient info
-                patient = User.query.get(pid)
+                patient = self.user_repo.get_by_id(pid)
                 if not patient:
                     continue
 
@@ -65,14 +66,16 @@ class DocumentSharingService:
 
                 for doc in patient_docs:
                     # Add patient information and sharing metadata
+                    # Extract metadata properly from document structure
+                    metadata = doc.get('metadata', {})
                     doc_info = {
                         'document_id': doc.get('id'),
-                        'filename': doc.get('source', 'Unknown'),
-                        'content_type': doc.get('content_type', 'unknown'),
-                        'upload_date': doc.get('upload_date'),
+                        'filename': doc.get('filename', metadata.get('source', 'Unknown')),
+                        'content_type': metadata.get('content_type', 'unknown'),
+                        'upload_date': metadata.get('upload_date'),
                         'patient_id': pid,
-                        'patient_name': patient.get_full_name(),
-                        'patient_username': patient.username,
+                        'patient_name': f"{patient.get('first_name', '')} {patient.get('last_name', '')}".strip(),
+                        'patient_username': patient.get('username'),
                         'shared_via_relationship': True,
                         'access_permissions': {
                             'can_view': True,
@@ -140,11 +143,13 @@ class DocumentSharingService:
             # Add sharing information to each document
             documents_with_sharing = []
             for doc in patient_docs:
+                # Extract metadata properly from document structure
+                metadata = doc.get('metadata', {})
                 doc_info = {
                     'document_id': doc.get('id'),
-                    'filename': doc.get('source', 'Unknown'),
-                    'content_type': doc.get('content_type', 'unknown'),
-                    'upload_date': doc.get('upload_date'),
+                    'filename': doc.get('filename', metadata.get('source', 'Unknown')),
+                    'content_type': metadata.get('content_type', 'unknown'),
+                    'upload_date': metadata.get('upload_date'),
                     'shared_with_count': len(shared_with),
                     'shared_with_professionals': shared_with,
                     'is_shared': len(shared_with) > 0
@@ -304,9 +309,9 @@ class DocumentSharingService:
                 user_id = log.get('user_id')
                 if user_id and user_id != patient_id:  # Exclude patient's own access
                     # Get professional info
-                    professional = User.query.get(user_id)
-                    if professional and professional.role == 'professional':
-                        prof_name = professional.get_full_name()
+                    professional = self.user_repo.get_by_id(user_id)
+                    if professional and professional.get('role') == 'professional':
+                        prof_name = f"{professional.get('first_name', '')} {professional.get('last_name', '')}".strip()
 
                         if prof_name not in professional_access:
                             professional_access[prof_name] = {

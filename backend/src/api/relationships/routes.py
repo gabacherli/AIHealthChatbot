@@ -6,11 +6,12 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt, get_jwt_identity
 from ...services.relationship_service import RelationshipService
 from ...services.audit_service import audit_service
-from ...models.database import User
+from ...database.repositories.user_repository import UserRepository
 from . import relationships_bp
 
 # Initialize services
 relationship_service = RelationshipService()
+user_repo = UserRepository()
 
 
 @relationships_bp.route("/test", methods=["GET"])
@@ -24,7 +25,7 @@ def get_current_user():
     claims = get_jwt()
     username = claims.get("sub")  # JWT contains username, not user_id
     if username:
-        return User.query.filter_by(username=username).first()
+        return user_repo.get_by_username(username)
     return None
 
 
@@ -33,7 +34,7 @@ def require_role(allowed_roles):
     def decorator(f):
         def wrapper(*args, **kwargs):
             user = get_current_user()
-            if not user or user.role not in allowed_roles:
+            if not user or user.get('role') not in allowed_roles:
                 return jsonify({"error": "Insufficient permissions"}), 403
             return f(*args, **kwargs)
         wrapper.__name__ = f.__name__
@@ -73,7 +74,7 @@ def create_relationship():
             return jsonify({"error": "patient_id and professional_id are required"}), 400
 
         # Only allow professionals to create relationships with themselves or admins
-        if current_user.role == 'professional' and current_user.id != professional_id:
+        if current_user.get('role') == 'professional' and current_user.get('id') != professional_id:
             return jsonify({"error": "Professionals can only create relationships for themselves"}), 403
 
         success, message, relationship = relationship_service.create_relationship(
@@ -81,7 +82,7 @@ def create_relationship():
             professional_id=professional_id,
             relationship_type=data.get('relationship_type', 'primary_care'),
             relationship_status=data.get('relationship_status', 'active'),
-            created_by_id=current_user.id,
+            created_by_id=current_user.get('id'),
             notes=data.get('notes'),
             permissions=data.get('permissions')
         )
@@ -89,7 +90,7 @@ def create_relationship():
         if success:
             return jsonify({
                 "message": message,
-                "relationship": relationship.to_dict(include_users=True)
+                "relationship": relationship
             }), 201
         else:
             return jsonify({"error": message}), 400
@@ -110,13 +111,13 @@ def get_relationship(relationship_id):
             return jsonify({"error": "Relationship not found"}), 404
 
         # Check if user has permission to view this relationship
-        if (current_user.role == 'patient' and current_user.id != relationship['patient_id']) or \
-           (current_user.role == 'professional' and current_user.id != relationship['professional_id']):
+        if (current_user.get('role') == 'patient' and current_user.get('id') != relationship['patient_id']) or \
+           (current_user.get('role') == 'professional' and current_user.get('id') != relationship['professional_id']):
             return jsonify({"error": "Access denied"}), 403
 
         # Log the access
         audit_service.log_relationship_access(
-            user_id=current_user.id,
+            user_id=current_user.get('id'),
             relationship_id=relationship_id,
             action='viewed',
             patient_id=relationship['patient_id'],
@@ -157,7 +158,7 @@ def update_relationship(relationship_id):
             return jsonify({"error": "Relationship not found"}), 404
 
         # Only allow the professional in the relationship or admin to update
-        if current_user.role == 'professional' and current_user.id != relationship['professional_id']:
+        if current_user.get('role') == 'professional' and current_user.get('id') != relationship['professional_id']:
             return jsonify({"error": "Access denied"}), 403
 
         # Prepare update data
@@ -180,14 +181,14 @@ def update_relationship(relationship_id):
 
         success, message, updated_relationship = relationship_service.update_relationship(
             relationship_id=relationship_id,
-            updated_by_id=current_user.id,
+            updated_by_id=current_user.get('id'),
             **update_data
         )
 
         if success:
             return jsonify({
                 "message": message,
-                "relationship": updated_relationship.to_dict(include_users=True)
+                "relationship": updated_relationship
             }), 200
         else:
             return jsonify({"error": message}), 400
@@ -218,12 +219,12 @@ def delete_relationship(relationship_id):
             return jsonify({"error": "Relationship not found"}), 404
 
         # Only allow the professional in the relationship or admin to delete
-        if current_user.role == 'professional' and current_user.id != relationship['professional_id']:
+        if current_user.get('role') == 'professional' and current_user.get('id') != relationship['professional_id']:
             return jsonify({"error": "Access denied"}), 403
 
         success, message = relationship_service.delete_relationship(
             relationship_id=relationship_id,
-            deleted_by_id=current_user.id,
+            deleted_by_id=current_user.get('id'),
             reason=data.get('reason')
         )
 
@@ -244,7 +245,7 @@ def get_professional_patients(professional_id):
         current_user = get_current_user()
 
         # Only allow the professional themselves or admin to view their patients
-        if current_user.role == 'professional' and current_user.id != professional_id:
+        if current_user.get('role') == 'professional' and current_user.get('id') != professional_id:
             return jsonify({"error": "Access denied"}), 403
 
         status = request.args.get('status', 'active')
@@ -254,7 +255,7 @@ def get_professional_patients(professional_id):
         audit_service.log_action(
             action='patients_list_accessed',
             resource_type='relationship',
-            user_id=current_user.id,
+            user_id=current_user.get('id'),
             details={'professional_id': professional_id, 'status_filter': status}
         )
 
@@ -272,14 +273,14 @@ def get_patient_professionals(patient_id):
         current_user = get_current_user()
 
         # Only allow the patient themselves, their professionals, or admin to view
-        if current_user.role == 'patient' and current_user.id != patient_id:
+        if current_user.get('role') == 'patient' and current_user.get('id') != patient_id:
             return jsonify({"error": "Access denied"}), 403
 
         # If professional, check if they have a relationship with this patient
-        if current_user.role == 'professional':
+        if current_user.get('role') == 'professional':
             has_access = relationship_service.check_access_permission(
                 patient_id=patient_id,
-                professional_id=current_user.id
+                professional_id=current_user.get('id')
             )
             if not has_access:
                 return jsonify({"error": "Access denied"}), 403
@@ -291,7 +292,7 @@ def get_patient_professionals(patient_id):
         audit_service.log_action(
             action='professionals_list_accessed',
             resource_type='relationship',
-            user_id=current_user.id,
+            user_id=current_user.get('id'),
             details={'patient_id': patient_id, 'status_filter': status}
         )
 

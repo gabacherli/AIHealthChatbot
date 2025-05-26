@@ -1,6 +1,31 @@
 version: '3.8'
 
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: health-chatbot-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-dev-root-password}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-health_chatbot}
+      - MYSQL_USER=${MYSQL_USER:-health_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-dev-user-password}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./backend/database/init:/docker-entrypoint-initdb.d:ro
+      - ./backend/database/config/mysql.cnf:/etc/mysql/conf.d/custom.cnf:ro
+    networks:
+      - health-chatbot-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-dev-root-password}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    command: --default-authentication-plugin=mysql_native_password
+
   qdrant:
     image: qdrant/qdrant:latest
     container_name: health-chatbot-qdrant
@@ -37,12 +62,15 @@ services:
       - PROD_OPENAI_KEY=${PROD_OPENAI_KEY}
       - VECTOR_DB_URL=http://qdrant:6333
       - VECTOR_DB_COLLECTION=health_documents
+      - DATABASE_URL=mysql+pymysql://${MYSQL_USER:-health_user}:${MYSQL_PASSWORD:-dev-user-password}@mysql:3306/${MYSQL_DATABASE:-health_chatbot}
     ports:
       - "5000:5000"
     volumes:
       - ./backend/data:/app/data:ro
       - backend-uploads:/app/uploads
     depends_on:
+      mysql:
+        condition: service_healthy
       qdrant:
         condition: service_healthy
     networks:
@@ -79,6 +107,8 @@ networks:
     driver: bridge
 
 volumes:
+  mysql-data:
+    driver: local
   backend-data:
     driver: local
   backend-uploads:
