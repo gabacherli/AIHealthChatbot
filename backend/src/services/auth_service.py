@@ -4,15 +4,13 @@ This module contains the authentication service functions using SQLAlchemy model
 """
 from datetime import datetime
 from ..models.database import User, db
-from .audit_service import AuditService
+from .audit_service import audit_service
 
 # Keep the mock users for migration purposes
 USERS = {
     "gabriel": {"password": "gabriel123", "role": "patient"},
     "drmurilo": {"password": "drmurilo123", "role": "professional"}
 }
-
-audit_service = AuditService()
 
 def get_user_by_credentials(username, password):
     """

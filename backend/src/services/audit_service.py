@@ -338,3 +338,7 @@ class AuditService:
 
         db.session.commit()
         return deleted_count
+
+
+# Create a singleton instance for easy import
+audit_service = AuditService()

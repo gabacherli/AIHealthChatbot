@@ -57,3 +57,15 @@ class BaseConfig:
 
     # Application settings
     CHUNK_DATA_PATH = "data/"
+
+    # Medical disclaimer settings
+    MEDICAL_RELEVANCE_THRESHOLD = float(os.getenv("MEDICAL_RELEVANCE_THRESHOLD", "0.8"))
+    PATHOLOGICAL_CONFIDENCE_THRESHOLD = float(os.getenv("PATHOLOGICAL_CONFIDENCE_THRESHOLD", "0.6"))
+
+    # Medical disclaimer templates - Portuguese (default)
+    PATIENT_DISCLAIMER_TEMPLATE_PT = "⚠️ Nota: A confiança da análise de IA é limitada para {sources}. Revisão profissional recomendada para avaliação definitiva."
+    PROFESSIONAL_DISCLAIMER_TEMPLATE_PT = "⚠️ Nota Clínica: Confiança da classificação de IA limitada para {sources}. Revisão manual aconselhada para precisão diagnóstica."
+
+    # Medical disclaimer templates - English
+    PATIENT_DISCLAIMER_TEMPLATE_EN = "⚠️ Note: AI analysis confidence is limited for {sources}. Professional review recommended for definitive assessment."
+    PROFESSIONAL_DISCLAIMER_TEMPLATE_EN = "⚠️ Clinical Note: AI classification confidence limited for {sources}. Manual review advised for diagnostic accuracy."

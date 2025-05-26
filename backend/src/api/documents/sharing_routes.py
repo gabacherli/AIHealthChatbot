@@ -5,7 +5,7 @@ This module contains the REST API endpoints for document sharing between patient
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt
 from ...services.document_sharing_service import DocumentSharingService
-from ...services.audit_service import AuditService
+from ...services.audit_service import audit_service
 from ...models.database import User
 
 # Create blueprint
@@ -13,7 +13,6 @@ sharing_bp = Blueprint("document_sharing", __name__)
 
 # Initialize services
 document_sharing_service = DocumentSharingService()
-audit_service = AuditService()
 
 
 def get_current_user():
